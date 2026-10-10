@@ -21,12 +21,12 @@ import {
 import { api } from '@/lib/api';
 import { YarnBatch, StockMovement } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { AlertBanner } from '@/components/ui/AlertBanner';
 import { BarcodeScannerModal } from '@/components/barcode/BarcodeScannerModal';
 import { StockActionModal } from '@/components/barcode/StockActionModal';
 import { RegisterNewBatchModal } from '@/components/barcode/RegisterNewBatchModal';
 import { BarcodeLabel } from '@/components/barcode/BarcodeLabel';
 import { InspectionModal } from '@/components/quality/InspectionModal';
+import { YarnWarehouseScene } from '@/components/warehouse/YarnWarehouseScene';
 
 export default function YarnInventoryPage() {
   const [activeTab, setActiveTab] = useState<'inventory' | 'ledger'>('inventory');
@@ -37,6 +37,10 @@ export default function YarnInventoryPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [lowStockOnly, setLowStockOnly] = useState(false);
+
+  // Warehouse interactive selection state
+  const [selectedBatch, setSelectedBatch] = useState<YarnBatch | null>(null);
+  const [selectedRackId, setSelectedRackId] = useState<string | null>(null);
 
   // Barcode & Action Modals State
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -62,6 +66,18 @@ export default function YarnInventoryPage() {
       ]);
       setBatches(batchData);
       setMovements(movementData);
+
+      // Default selected batch to where stock is less
+      if (batchData.length > 0) {
+        setSelectedBatch((prev) => {
+          if (prev) {
+            const matched = batchData.find((b) => b.id === prev.id || b.batch_code === prev.batch_code);
+            if (matched) return matched;
+          }
+          const lowStock = batchData.find((b) => b.quantity_available <= b.reorder_threshold);
+          return lowStock || batchData[0];
+        });
+      }
     } catch (err) {
       console.error('Failed to load storekeeper data', err);
     } finally {
@@ -88,9 +104,6 @@ export default function YarnInventoryPage() {
   };
 
   const lowStockCount = batches.filter(b => b.quantity_available <= b.reorder_threshold).length;
-  const pendingQCCount = batches.filter(
-    b => !b.inspection_status || b.inspection_status === 'PENDING_INSPECTION' || b.inspection_status === 'ON_HOLD'
-  ).length;
   const totalAvailableKg = batches.reduce((sum, b) => sum + b.quantity_available, 0);
 
   return (
@@ -99,31 +112,17 @@ export default function YarnInventoryPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-900">Storekeeper — Yarn Operations</h1>
-            <span className="bg-teal-100 text-teal-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+            <h1 className="text-2xl font-bold text-slate-900">Yarn Warehouse</h1>
+            <span className="bg-emerald-100 text-emerald-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
               {batches.length} Batches
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Barcode-enabled inventory management, incoming quality inspections, and stock balance ledger.
+            Storage locations · Stock tracking · Quality control
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Incoming QC Workstation Link */}
-          <Link
-            href="/storekeeper/quality-check"
-            className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center gap-2"
-          >
-            <ShieldCheck className="h-4 w-4" />
-            <span>Incoming QC</span>
-            {pendingQCCount > 0 && (
-              <span className="bg-amber-900 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
-                {pendingQCCount}
-              </span>
-            )}
-          </Link>
-
           {/* Primary Action: Scan Barcode */}
           <button
             type="button"
@@ -176,75 +175,32 @@ export default function YarnInventoryPage() {
         </div>
       )}
 
-      {/* Summary KPI chips */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase text-slate-500">Total Stock Available</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">
-            {totalAvailableKg.toLocaleString()} <span className="text-sm font-normal text-slate-500">kg</span>
-          </p>
-          <p className="text-[11px] text-emerald-600 mt-1">Approved & cleared to issue</p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase text-slate-500">Active Batches</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{batches.length}</p>
-          <p className="text-[11px] text-slate-400 mt-1">Total registered lots</p>
-        </div>
-        <div className={`rounded-lg p-4 shadow-sm border ${pendingQCCount > 0 ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'}`}>
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase text-slate-600">Pending QC / Quarantine</p>
-            <ShieldCheck className={`h-4 w-4 ${pendingQCCount > 0 ? 'text-amber-600' : 'text-slate-400'}`} />
-          </div>
-          <p className={`text-2xl font-bold mt-1 ${pendingQCCount > 0 ? 'text-amber-700' : 'text-slate-900'}`}>
-            {pendingQCCount}
-          </p>
-          <p className="text-[11px] text-amber-700 mt-1">
-            {pendingQCCount > 0 ? 'Gated: 0 kg available until passed' : 'All incoming lots inspected'}
-          </p>
-        </div>
-        <div className={`rounded-lg p-4 shadow-sm border ${lowStockCount > 0 ? 'bg-rose-50 border-rose-300' : 'bg-white border-slate-200'}`}>
-          <p className="text-xs font-semibold uppercase text-slate-600">Low-Stock Batches</p>
-          <p className={`text-2xl font-bold mt-1 ${lowStockCount > 0 ? 'text-rose-700' : 'text-slate-900'}`}>
-            {lowStockCount}
-          </p>
-          <p className="text-[11px] text-slate-400 mt-1">Below reorder threshold</p>
-        </div>
-      </div>
-
-      {/* Pending Quality Inspection Alert Banner */}
-      {pendingQCCount > 0 && (
-        <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-start gap-3">
-            <ShieldCheck className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-800">
-                Incoming Quality Inspection Required ({pendingQCCount} lot{pendingQCCount > 1 ? 's' : ''})
-              </p>
-              <p className="text-xs text-amber-900 mt-0.5">
-                Newly delivered yarn must undergo visual inspection and count/tensile verification before release. Available quantity is strictly locked to 0 kg.
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/storekeeper/quality-check"
-            className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold whitespace-nowrap shadow-xs flex items-center justify-center gap-1 self-start sm:self-auto"
-          >
-            <span>Open QC Workstation</span>
-            <span>→</span>
-          </Link>
-        </div>
-      )}
-
-      {/* Low-stock Warning Banner */}
-      {lowStockCount > 0 && (
-        <AlertBanner
-          type="warning"
-          title="Yarn Shortage Risk Alert"
-          message={`${lowStockCount} yarn batch(es) have fallen below their configured reorder threshold. Use the barcode scanner to quickly issue remaining stock or receive replenishment.`}
-          actionText={lowStockOnly ? 'Show All' : 'Filter Low Stock'}
-          onAction={() => setLowStockOnly(!lowStockOnly)}
-        />
-      )}
+      {/* STAGE 2: Interactive Animated 2D/Isometric Yarn Warehouse Scene */}
+      <YarnWarehouseScene
+        batches={batches}
+        selectedBatch={selectedBatch}
+        onSelectBatch={(batch) => {
+          setSelectedBatch(batch);
+          if (batch?.storage_location) {
+            setSelectedRackId(batch.storage_location);
+          }
+        }}
+        selectedRackId={selectedRackId}
+        onSelectRack={(rackId) => {
+          setSelectedRackId(rackId);
+          const matched = batches.find((b) => b.storage_location === rackId);
+          if (matched) setSelectedBatch(matched);
+        }}
+        onScanBarcodeClick={() => setIsScannerOpen(true)}
+        onReceiveClick={(batch) => setSelectedBatchForAction(batch)}
+        onIssueClick={(batch) => setSelectedBatchForAction(batch)}
+        onInspectClick={(batch) => setInspectingBatch(batch)}
+        onPrintLabelClick={(batch) => setLabelBatch(batch)}
+        onRegisterBatchClick={() => {
+          setUnrecognizedCode(undefined);
+          setIsRegisterOpen(true);
+        }}
+      />
 
       {/* Segment Switcher Tabs: Inventory vs Movement Ledger */}
       <div className="flex border-b border-slate-200">
@@ -337,6 +293,7 @@ export default function YarnInventoryPage() {
                 <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-600">
                   <tr>
                     <th className="py-3 px-4">Batch / Lot Code</th>
+                    <th className="py-3 px-4">Storage Bay</th>
                     <th className="py-3 px-4">Barcode ID</th>
                     <th className="py-3 px-4">Yarn Type</th>
                     <th className="py-3 px-4">Colour</th>
@@ -350,13 +307,13 @@ export default function YarnInventoryPage() {
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
                     <tr>
-                      <td colSpan={9} className="py-8 text-center text-slate-500 text-sm">
+                      <td colSpan={10} className="py-8 text-center text-slate-500 text-sm">
                         Loading inventory records...
                       </td>
                     </tr>
                   ) : batches.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-12 text-center text-slate-500">
+                      <td colSpan={10} className="py-12 text-center text-slate-500">
                         <Boxes className="h-8 w-8 mx-auto text-slate-300 mb-2" />
                         <p className="font-medium text-slate-700">No yarn batches found</p>
                         <p className="text-xs text-slate-500 mt-1">Try adjusting your filters or scan a new batch barcode.</p>
@@ -370,11 +327,36 @@ export default function YarnInventoryPage() {
                       const isQCHeld = qc === 'ON_HOLD';
                       const isQCPassed = qc === 'PASSED';
                       const isQCRejected = qc === 'REJECTED';
+                      const isSelected = selectedBatch?.id === batch.id;
 
                       return (
-                        <tr key={batch.id} className="hover:bg-slate-50/80 transition-colors">
+                        <tr
+                          key={batch.id}
+                          onClick={() => {
+                            setSelectedBatch(batch);
+                            if (batch.storage_location) {
+                              setSelectedRackId(batch.storage_location);
+                            }
+                          }}
+                          className={`cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'bg-yellow-50/90 font-medium border-l-4 border-l-yellow-400 shadow-xs'
+                              : 'hover:bg-slate-50/80'
+                          }`}
+                          title="Click to locate on interactive warehouse map"
+                        >
                           <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
-                            {batch.batch_code}
+                            <div className="flex items-center gap-1.5">
+                              {isSelected && (
+                                <span className="text-yellow-500 font-bold text-xs animate-pulse">▶</span>
+                              )}
+                              <span>{batch.batch_code}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="bg-slate-100 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded border border-slate-200">
+                              {batch.storage_location || 'Rack A1'}
+                            </span>
                           </td>
                           <td className="py-3.5 px-4 font-mono text-xs text-teal-800">
                             <span className="bg-teal-50 border border-teal-200 px-2 py-0.5 rounded font-semibold">
@@ -559,6 +541,10 @@ export default function YarnInventoryPage() {
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onBatchFound={(batch) => {
+          setSelectedBatch(batch);
+          if (batch.storage_location) {
+            setSelectedRackId(batch.storage_location);
+          }
           setSelectedBatchForAction(batch);
         }}
         onRegisterNew={(code) => {

@@ -92,6 +92,7 @@ export interface YarnBatch {
   certificate_reference?: string;
   unit: string;
   reorder_threshold: number;
+  storage_location?: string;
   received_at: string;
   created_at: string;
 }

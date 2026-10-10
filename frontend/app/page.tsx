@@ -9,8 +9,6 @@ import {
   ShieldCheck,
   Building2,
   ArrowRight,
-  Layers,
-  Sparkles
 } from 'lucide-react';
 
 // Four Role Cards configuration
@@ -72,12 +70,12 @@ const ROLES = [
 export default function WelcomePage() {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-[#FAF8F5] text-slate-900 font-sans selection:bg-teal-100 selection:text-teal-900">
-      
+
       {/* ─── 4 BEAUTIFUL GRAPHICAL BACKGROUND ANIMATIONS (Simple & Professional) ─── */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-        
+
         {/* 1. Subtle Woven Fabric Grid (Loom Warp & Weft Pattern) */}
-        <div 
+        <div
           className="absolute inset-0 opacity-[0.035]"
           style={{
             backgroundImage: `
@@ -155,33 +153,8 @@ export default function WelcomePage() {
 
       {/* ─── MAIN CONTENT CONTAINER ─── */}
       <div className="relative z-10 min-h-screen flex flex-col justify-between p-6 sm:p-10 lg:p-14 max-w-7xl mx-auto">
-        
-        {/* TOP BRAND BAR */}
-        <motion.header
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full flex items-center justify-between pb-6"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-sm">
-              <Layers className="w-5 h-5 text-teal-400" />
-            </div>
-            <div>
-              <span className="font-extrabold text-lg tracking-tight text-slate-900 block leading-tight">
-                VASTRA
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block">
-                Textile Management
-              </span>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 border border-slate-200/80 shadow-xs text-xs font-semibold text-slate-600">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Factory Portal Active</span>
-          </div>
-        </motion.header>
+
 
         {/* WELCOME HEADING & SUBTITLE */}
         <motion.div
@@ -190,10 +163,42 @@ export default function WelcomePage() {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="text-center my-auto py-8 sm:py-12 space-y-4"
         >
-          {/* Prominent Required Heading */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight max-w-4xl mx-auto">
-            Welcome to Vastra Textile Management System
-          </h1>
+          {/* Animated Heading — letters appear one by one, no colour change */}
+          {(() => {
+            const text = "Welcome to Vastra";
+            return (
+              <h1
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight max-w-4xl mx-auto"
+                aria-label={text}
+              >
+                {text.split('').map((char, i) => (
+                  <motion.span
+                    key={i}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.3,
+                      delay: i * 0.045,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    style={{ display: 'inline-block' }}
+                  >
+                    {char === ' ' ? '\u00A0' : char}
+                  </motion.span>
+                ))}
+              </h1>
+            );
+          })()}
+
+          {/* Sub-brand line */}
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.9 }}
+            className="text-sm sm:text-base font-semibold tracking-widest uppercase text-slate-400 mt-1"
+          >
+            Textile Management System
+          </motion.p>
 
           {/* Welcoming Subtitle */}
           <p className="text-base sm:text-lg md:text-xl text-slate-600 font-medium max-w-xl mx-auto">
@@ -210,10 +215,10 @@ export default function WelcomePage() {
                   key={role.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ 
-                    duration: 0.5, 
+                  transition={{
+                    duration: 0.5,
                     delay: 0.2 + (index * 0.08),
-                    ease: [0.21, 0.47, 0.32, 0.98] 
+                    ease: [0.21, 0.47, 0.32, 0.98]
                   }}
                   whileHover={{ y: -6 }}
                   whileTap={{ scale: 0.99 }}
@@ -224,8 +229,8 @@ export default function WelcomePage() {
                     className={`group relative h-full flex flex-col justify-between bg-white/95 backdrop-blur-xs border border-slate-200/90 ${role.hoverBorder} rounded-3xl p-7 sm:p-8 shadow-[0_4px_20px_rgba(15,23,42,0.03)] hover:shadow-[0_20px_35px_rgba(15,23,42,0.08)] transition-all duration-300 cursor-pointer overflow-hidden focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-500/30`}
                   >
                     {/* Top ambient card glow on hover */}
-                    <div 
-                      className={`absolute top-0 right-0 w-36 h-36 bg-gradient-to-br ${role.bgGlow} rounded-bl-full pointer-events-none transition-opacity duration-300 opacity-60 group-hover:opacity-100`} 
+                    <div
+                      className={`absolute top-0 right-0 w-36 h-36 bg-gradient-to-br ${role.bgGlow} rounded-bl-full pointer-events-none transition-opacity duration-300 opacity-60 group-hover:opacity-100`}
                     />
 
                     <div>

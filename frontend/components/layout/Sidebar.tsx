@@ -43,7 +43,7 @@ export const Sidebar: React.FC = () => {
         <div className="px-3 mb-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">
           Core Modules
         </div>
-        
+
         <Link
           href="/storekeeper/inventory"
           className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${

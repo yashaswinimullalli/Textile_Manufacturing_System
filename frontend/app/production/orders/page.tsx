@@ -20,7 +20,6 @@ import {
 import { api } from '@/lib/api';
 import { ProductionOrder, MaterialAvailability, Machine } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { AlertBanner } from '@/components/ui/AlertBanner';
 import UploadOrdersModal from '@/components/orders/UploadOrdersModal';
 
 export default function ProductionOrdersPage() {
@@ -127,21 +126,7 @@ export default function ProductionOrdersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-900">Production Orders</h1>
-            <span className="bg-sky-100 text-sky-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-              {orders.length} Total
-            </span>
-            {flaggedOrders.length > 0 && (
-              <span className="bg-amber-100 text-amber-900 text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-amber-300">
-                <AlertOctagon className="h-3 w-3 text-amber-600" />
-                {flaggedOrders.length} Flagged for Review
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Track weaving targets, machine assignments, material readiness, and downtime review flags.
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900">Production Orders</h1>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -178,16 +163,7 @@ export default function ProductionOrdersPage() {
         </div>
       )}
 
-      {/* Flagged Orders Alert Banner (Point 4) */}
-      {flaggedOrders.length > 0 && (
-        <AlertBanner
-          type="warning"
-          title={`${flaggedOrders.length} Order(s) Flagged for Review — Loom Downtime Impact`}
-          message="One or more assigned machines recorded stoppage, breakdown, or maintenance. Downtime was calculated from timestamps. Please review affected schedules below."
-          actionText={onlyFlagged ? 'Show All Orders' : 'Filter Flagged Only'}
-          onAction={() => setOnlyFlagged(!onlyFlagged)}
-        />
-      )}
+
 
       {/* Filter Toolbar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">

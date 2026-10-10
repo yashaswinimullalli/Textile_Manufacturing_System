@@ -12,6 +12,10 @@ export const Header: React.FC<HeaderProps> = ({
   title,
   subtitle,
 }) => {
+  if (!title && !subtitle) {
+    return null;
+  }
+
   return (
     <header className="h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-end sticky top-0 z-20">
       {title && (
