@@ -7,7 +7,8 @@ import {
   Printer,
   Building,
   Phone,
-  MapPin
+  MapPin,
+  Pencil
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/formatters';
@@ -204,9 +205,14 @@ export default function EmployeeDirectory() {
 
                   <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                     <span className="text-xs font-medium text-slate-400 uppercase tracking-wider font-sans">Daily Wage</span>
-                    <span className="text-lg font-serif text-indigo-700 font-medium">
-                      {formatCurrency(emp.wage)}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <button className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition" title="Edit Employee">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <span className="text-lg font-serif text-indigo-700 font-medium">
+                        {formatCurrency(emp.wage)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -246,9 +252,14 @@ export default function EmployeeDirectory() {
                         </div>
                       </td>
                       <td className="py-5 px-6 align-middle text-right">
-                        <span className="text-base font-serif text-slate-700 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                          {formatCurrency(emp.wage)}
-                        </span>
+                        <div className="flex items-center justify-end gap-3">
+                          <button className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition" title="Edit Employee">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <span className="text-base font-serif text-slate-700 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 inline-block text-center min-w-[80px]">
+                            {formatCurrency(emp.wage)}
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   ))}
