@@ -263,7 +263,7 @@ export default function OwnerDashboard() {
             <div className="space-y-3">
               <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <span className="text-sm font-medium text-slate-600">Total Revenue (Sales)</span>
-                <span className="text-lg font-medium text-slate-900">{formatCurrency(activeDayData.revenue)}</span>
+                <span className="text-lg font-serif text-slate-900">{formatCurrency(activeDayData.revenue)}</span>
               </div>
               <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <span className="text-sm font-medium text-slate-600">Raw Materials Cost</span>

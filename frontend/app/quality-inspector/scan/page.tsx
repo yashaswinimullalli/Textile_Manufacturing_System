@@ -21,7 +21,7 @@ export default function ScanPage() {
       <div>
         <div className="flex items-center space-x-2 mb-1">
           <Barcode className="w-5 h-5 text-blue-600" />
-          <h1 className="text-xl font-medium text-slate-900">Scan Roll Barcode</h1>
+          <h1 className="text-xl font-serif tracking-tight text-slate-900">Scan Roll Barcode</h1>
         </div>
         <p className="text-sm text-slate-500">
           Point your industrial barcode scanner or camera at the roll label, or use manual entry below.

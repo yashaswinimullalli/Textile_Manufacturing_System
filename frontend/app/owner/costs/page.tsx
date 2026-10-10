@@ -47,7 +47,7 @@ export default function OwnerCostsPage() {
         <div>
           <div className="flex items-center space-x-2 mb-1">
             <IndianRupee className="w-5 h-5 text-purple-600" />
-            <h1 className="text-xl font-medium text-slate-900">Costs & Expenses</h1>
+            <h1 className="text-xl font-serif tracking-tight text-slate-900">Costs & Expenses</h1>
           </div>
           <p className="text-sm text-slate-500">
             Recorded rework costs, rejected material losses, and quality-related expenses.
@@ -63,17 +63,17 @@ export default function OwnerCostsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-purple-700 mb-2">Confirmed Costs</div>
-            <div className="text-3xl font-medium text-purple-800">{formatCurrency(totalRecorded, currency)}</div>
+            <div className="text-3xl font-serif tracking-tight text-purple-800">{formatCurrency(totalRecorded, currency)}</div>
             <div className="text-xs text-purple-600 mt-1 font-medium">Verified invoices & labor logs</div>
           </div>
           <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-amber-700 mb-2">Estimated Exposure</div>
-            <div className="text-3xl font-medium text-amber-700">{formatCurrency(totalEstimated, currency)}</div>
+            <div className="text-3xl font-serif tracking-tight text-amber-700">{formatCurrency(totalEstimated, currency)}</div>
             <div className="text-xs text-amber-600 mt-1 font-medium">Projected rework & repair costs</div>
           </div>
           <div className="bg-slate-900 border-2 border-slate-700 rounded-2xl p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-slate-400 mb-2">Total Exposure</div>
-            <div className="text-3xl font-medium text-white">{formatCurrency(totalRecorded + totalEstimated, currency)}</div>
+            <div className="text-3xl font-serif tracking-tight text-white">{formatCurrency(totalRecorded + totalEstimated, currency)}</div>
             <div className="text-xs text-slate-400 mt-1 font-medium">Confirmed + estimated combined</div>
           </div>
         </div>

@@ -30,25 +30,25 @@ export default function OrderFulfillmentPage() {
         
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <div className="text-[11px] font-medium uppercase text-slate-400">Total Orders</div>
-          <div className="text-3xl font-medium text-slate-900 mt-1">6 Active</div>
+          <div className="text-3xl font-serif tracking-tight text-slate-900 mt-1">6 Active</div>
           <div className="text-[11px] font-medium text-slate-500 mt-1">October Contracts</div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm">
           <div className="text-[11px] font-medium uppercase text-emerald-600">On Schedule</div>
-          <div className="text-3xl font-medium text-emerald-600 mt-1">4 Orders</div>
+          <div className="text-3xl font-serif tracking-tight text-emerald-600 mt-1">4 Orders</div>
           <div className="text-[11px] font-medium text-emerald-700 mt-1">Buffer Safe</div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-rose-200 shadow-sm">
           <div className="text-[11px] font-medium uppercase text-rose-600">Delivery Risk</div>
-          <div className="text-3xl font-medium text-rose-600 mt-1">2 Orders</div>
+          <div className="text-3xl font-serif tracking-tight text-rose-600 mt-1">2 Orders</div>
           <div className="text-[11px] font-medium text-rose-700 mt-1">380m Short</div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-sm">
           <div className="text-[11px] font-medium uppercase text-blue-600">Total Yardage</div>
-          <div className="text-3xl font-medium text-blue-600 mt-1">12,000m</div>
+          <div className="text-3xl font-serif tracking-tight text-blue-600 mt-1">12,000m</div>
           <div className="text-[11px] font-medium text-slate-500 mt-1">88.5% Weaved</div>
         </div>
 
@@ -58,7 +58,7 @@ export default function OrderFulfillmentPage() {
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-medium text-slate-900 tracking-tight">Buyer Order Status</h2>
+            <h2 className="text-lg font-serif text-slate-900 tracking-tight">Buyer Order Status</h2>
             <div className="text-xs font-medium text-slate-400 mt-0.5">Manufacturing Completion vs Dispatch Deadlines</div>
           </div>
           <span className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-200">

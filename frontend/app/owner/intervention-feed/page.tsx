@@ -33,25 +33,25 @@ export default function OwnerInterventionFeedPage() {
         
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <div className="text-[11px] font-medium uppercase text-slate-400">Total Escalations</div>
-          <div className="text-3xl font-medium text-slate-900 mt-1">{interventions.length} Items</div>
+          <div className="text-3xl font-serif tracking-tight text-slate-900 mt-1">{interventions.length} Items</div>
           <div className="text-[11px] font-medium text-slate-500 mt-1">Floor Escalated</div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-rose-200 shadow-sm">
           <div className="text-[11px] font-medium uppercase text-rose-600">Pending Actions</div>
-          <div className="text-3xl font-medium text-rose-600 mt-1">{pendingCount} Decisions</div>
+          <div className="text-3xl font-serif tracking-tight text-rose-600 mt-1">{pendingCount} Decisions</div>
           <div className="text-[11px] font-medium text-rose-700 mt-1">Immediate Need</div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-amber-200 shadow-sm">
           <div className="text-[11px] font-medium uppercase text-amber-600">Capital At Risk</div>
-          <div className="text-2xl sm:text-3xl font-medium text-amber-600 mt-1">₹{totalAtRisk.toLocaleString('en-IN')}</div>
+          <div className="text-2xl sm:text-3xl font-serif tracking-tight text-amber-600 mt-1">₹{totalAtRisk.toLocaleString('en-IN')}</div>
           <div className="text-[11px] font-medium text-amber-700 mt-1">Raw Materials</div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-sm">
           <div className="text-[11px] font-medium uppercase text-blue-600">Sync Status</div>
-          <div className="text-3xl font-medium text-blue-600 mt-1">Live Linked</div>
+          <div className="text-3xl font-serif tracking-tight text-blue-600 mt-1">Live Linked</div>
           <div className="text-[11px] font-medium text-emerald-600 mt-1">Inspector Pushed</div>
         </div>
 
@@ -61,7 +61,7 @@ export default function OwnerInterventionFeedPage() {
       <div className="space-y-6 max-w-4xl mx-auto">
         <div className="flex items-center justify-between bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
           <div>
-            <h2 className="text-xl font-medium text-slate-900 tracking-tight">Active Floor Escalations</h2>
+            <h2 className="text-xl font-serif tracking-tight text-slate-900 tracking-tight">Active Floor Escalations</h2>
             <div className="text-xs font-medium text-slate-400 mt-0.5">Management Actions Required Before Dispatch</div>
           </div>
           <button
@@ -109,7 +109,7 @@ export default function OwnerInterventionFeedPage() {
                         <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">
                           WHAT HAPPENED
                         </span>
-                        <h3 className="text-lg sm:text-xl font-medium text-slate-900 tracking-tight">
+                        <h3 className="text-lg sm:text-xl font-serif tracking-tight text-slate-900 tracking-tight">
                           {alert.whatHappened}
                         </h3>
                       </div>

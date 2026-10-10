@@ -46,7 +46,7 @@ export default function RollSummary({ data, onRefresh, basePath = '' }: RollSumm
               </span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-medium text-slate-900 tracking-tight mt-2 font-mono flex items-center gap-3">
+            <h1 className="text-3xl sm:text-4xl font-serif tracking-tight text-slate-900 tracking-tight mt-2 font-mono flex items-center gap-3">
               {roll.roll_code}
             </h1>
 

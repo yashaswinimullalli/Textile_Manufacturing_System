@@ -53,7 +53,7 @@ export default function ReinspectionQueue({ basePath = '/rolls' }: ReinspectionQ
             <RefreshCw className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-medium text-slate-900">Rolls Returned for Re-check</h2>
+            <h2 className="text-lg font-serif text-slate-900">Rolls Returned for Re-check</h2>
             <p className="text-xs text-slate-500">Fabric rolls washed or repaired on the floor that require a second inspector check</p>
           </div>
         </div>

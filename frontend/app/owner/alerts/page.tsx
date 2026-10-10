@@ -44,7 +44,7 @@ export default function OwnerAlertsPage() {
       <div>
         <div className="flex items-center space-x-2 mb-1">
           <AlertOctagon className="w-5 h-5 text-rose-600" />
-          <h1 className="text-xl font-medium text-slate-900">Alerts & Issues</h1>
+          <h1 className="text-xl font-serif tracking-tight text-slate-900">Alerts & Issues</h1>
         </div>
         <p className="text-sm text-slate-500">
           Quality issues and production problems requiring your decision.

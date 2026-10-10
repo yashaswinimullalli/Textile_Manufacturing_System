@@ -40,25 +40,25 @@ export default function CostLedgerPage() {
         
         <div className="bg-white p-5 rounded-2xl border border-rose-200 shadow-sm">
           <div className="text-[11px] font-medium uppercase text-rose-600">Total Scrap</div>
-          <div className="text-2xl sm:text-3xl font-medium text-rose-600 mt-1">{formatCurrency(totalScrap)}</div>
+          <div className="text-2xl sm:text-3xl font-serif tracking-tight text-rose-600 mt-1">{formatCurrency(totalScrap)}</div>
           <div className="text-[11px] font-medium text-rose-700 mt-1">480m Scrapped</div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-amber-200 shadow-sm">
           <div className="text-[11px] font-medium uppercase text-amber-600">Rework Bills</div>
-          <div className="text-2xl sm:text-3xl font-medium text-amber-600 mt-1">₹32,500</div>
+          <div className="text-2xl sm:text-3xl font-serif tracking-tight text-amber-600 mt-1">₹32,500</div>
           <div className="text-[11px] font-medium text-amber-700 mt-1">Chemical Washes</div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <div className="text-[11px] font-medium uppercase text-slate-400">Yarn Spend</div>
-          <div className="text-2xl sm:text-3xl font-medium text-slate-900 mt-1">₹5,20,000</div>
+          <div className="text-2xl sm:text-3xl font-serif tracking-tight text-slate-900 mt-1">₹5,20,000</div>
           <div className="text-[11px] font-medium text-slate-500 mt-1">October Purchases</div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm">
           <div className="text-[11px] font-medium uppercase text-emerald-600">Audit Status</div>
-          <div className="text-3xl font-medium text-emerald-600 mt-1">Verified Clean</div>
+          <div className="text-3xl font-serif tracking-tight text-emerald-600 mt-1">Verified Clean</div>
           <div className="text-[11px] font-medium text-emerald-700 mt-1">Reconciled Ledger</div>
         </div>
 
@@ -68,7 +68,7 @@ export default function CostLedgerPage() {
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-medium text-slate-900 tracking-tight">Floor Scrap Breakdown</h2>
+            <h2 className="text-lg font-serif text-slate-900 tracking-tight">Floor Scrap Breakdown</h2>
             <div className="text-xs font-medium text-slate-400 mt-0.5">Direct Losses Incurred From Rejected Cloth</div>
           </div>
           <span className="px-3 py-1 bg-rose-50 text-rose-700 text-xs font-medium rounded-full border border-rose-200">
@@ -108,7 +108,7 @@ export default function CostLedgerPage() {
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-medium text-slate-900 tracking-tight">Financial Expense Vouchers</h2>
+            <h2 className="text-lg font-serif text-slate-900 tracking-tight">Financial Expense Vouchers</h2>
             <div className="text-xs font-medium text-slate-400 mt-0.5">Audited Manufacturing & Material Receipts</div>
           </div>
           <span className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-200">

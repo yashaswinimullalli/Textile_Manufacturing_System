@@ -187,7 +187,7 @@ export default function BarcodeScanner({ onScan, redirectOnScan = true }: Barcod
           {scannedCode ? (
             <div className="relative z-20 flex flex-col items-center space-y-3 bg-slate-900/90 p-6 rounded-2xl border border-emerald-500/50 shadow-2xl animate-in zoom-in-95 duration-200">
               <CheckCircle2 className="w-14 h-14 text-emerald-400" />
-              <div className="text-2xl font-medium text-white font-mono tracking-widest">{scannedCode}</div>
+              <div className="text-2xl font-serif tracking-tight text-white font-mono tracking-widest">{scannedCode}</div>
               <div className="text-xs text-emerald-400 font-medium flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 Valid barcode read! Opening roll inspection passport...

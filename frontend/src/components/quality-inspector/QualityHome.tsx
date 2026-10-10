@@ -57,7 +57,7 @@ export default function QualityHome() {
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Floor Quality Terminal • Station 1</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-white">
+          <h1 className="text-2xl sm:text-3xl font-serif tracking-tight tracking-tight text-white">
             Quality Inspection Gate
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
@@ -112,7 +112,7 @@ export default function QualityHome() {
             </div>
             <div>
               <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400 block">Needs Inspection</span>
-              <span className="text-2xl font-medium text-slate-900">{summary.counts.needs_inspection}</span>
+              <span className="text-2xl font-serif tracking-tight text-slate-900">{summary.counts.needs_inspection}</span>
               <span className="text-[10px] text-slate-500 block font-medium">New rolls waiting for first check</span>
             </div>
           </div>
@@ -123,7 +123,7 @@ export default function QualityHome() {
             </div>
             <div>
               <span className="text-[11px] font-medium uppercase tracking-wider text-amber-700 block">Needs Re-check</span>
-              <span className="text-2xl font-medium text-amber-600">{summary.counts.rework_due}</span>
+              <span className="text-2xl font-serif tracking-tight text-amber-600">{summary.counts.rework_due}</span>
               <span className="text-[10px] text-slate-500 block font-medium">Repaired cloth waiting second check</span>
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function QualityHome() {
             </div>
             <div>
               <span className="text-[11px] font-medium uppercase tracking-wider text-rose-700 block">Scrapped (Reject)</span>
-              <span className="text-2xl font-medium text-rose-600">{summary.counts.recently_rejected}</span>
+              <span className="text-2xl font-serif tracking-tight text-rose-600">{summary.counts.recently_rejected}</span>
               <span className="text-[10px] text-slate-500 block font-medium">Permanently blocked from trucks</span>
             </div>
           </div>
@@ -145,7 +145,7 @@ export default function QualityHome() {
             </div>
             <div>
               <span className="text-[11px] font-medium uppercase tracking-wider text-emerald-700 block">Checked Today</span>
-              <span className="text-2xl font-medium text-emerald-600">{summary.counts.inspected_today}</span>
+              <span className="text-2xl font-serif tracking-tight text-emerald-600">{summary.counts.inspected_today}</span>
               <span className="text-[10px] text-slate-500 block font-medium">Rolls tested during this shift</span>
             </div>
           </div>

@@ -137,7 +137,7 @@ export default function OwnerAuditPage() {
         <div>
           <div className="flex items-center space-x-2 mb-1">
             <History className="w-5 h-5 text-slate-700" />
-            <h1 className="text-xl font-medium text-slate-900">Audit History</h1>
+            <h1 className="text-xl font-serif tracking-tight text-slate-900">Audit History</h1>
           </div>
           <p className="text-sm text-slate-500">
             Complete record of who performed what actions, when, and what changed.

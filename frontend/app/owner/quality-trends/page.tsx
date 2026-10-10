@@ -112,7 +112,7 @@ export default function QualityTrendsPage() {
         <div>
           <div className="flex items-center space-x-2 mb-1">
             <TrendingUp className="w-5 h-5 text-blue-600" />
-            <h1 className="text-xl font-medium text-slate-900">Quality Trends</h1>
+            <h1 className="text-xl font-serif tracking-tight text-slate-900">Quality Trends</h1>
           </div>
           <p className="text-sm text-slate-500">
             Pass/fail rates, defect categories, and quality performance over time.
@@ -140,7 +140,7 @@ export default function QualityTrendsPage() {
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-4xl font-medium text-emerald-600">{summary.pass_rate}</div>
+          <div className="text-4xl font-serif tracking-tight text-emerald-600">{summary.pass_rate}</div>
           <div className="text-xs text-slate-600 font-medium mt-1">Rolls meeting quality standards</div>
           <div className="text-[11px] text-slate-400 mt-0.5">Target: ≥85%</div>
           <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
@@ -155,7 +155,7 @@ export default function QualityTrendsPage() {
               <RefreshCw className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-4xl font-medium text-amber-600">{summary.rework_rate}</div>
+          <div className="text-4xl font-serif tracking-tight text-amber-600">{summary.rework_rate}</div>
           <div className="text-xs text-slate-600 font-medium mt-1">Rolls requiring washing or repair</div>
           <div className="text-[11px] text-slate-400 mt-0.5">Can usually be recovered</div>
           <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
@@ -170,7 +170,7 @@ export default function QualityTrendsPage() {
               <XCircle className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-4xl font-medium text-rose-600">{summary.reject_rate}</div>
+          <div className="text-4xl font-serif tracking-tight text-rose-600">{summary.reject_rate}</div>
           <div className="text-xs text-slate-600 font-medium mt-1">Permanently scrapped fabric</div>
           <div className="text-[11px] text-slate-400 mt-0.5">Direct financial loss</div>
           <div className="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">

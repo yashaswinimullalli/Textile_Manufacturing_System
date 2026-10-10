@@ -36,7 +36,7 @@ export default function InspectionTimeline({ inspections }: InspectionTimelinePr
     <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-2">
         <div>
-          <h2 className="text-lg font-medium text-slate-900 flex items-center gap-2">
+          <h2 className="text-lg font-serif text-slate-900 flex items-center gap-2">
             <History className="w-5 h-5 text-indigo-600" />
             Quality Check History ({inspections.length} {inspections.length === 1 ? 'Check' : 'Checks'} Logged)
           </h2>

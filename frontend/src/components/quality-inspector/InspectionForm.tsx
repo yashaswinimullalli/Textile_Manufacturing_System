@@ -132,7 +132,7 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
           Quality Check Saved Successfully
         </span>
 
-        <h2 className="text-3xl font-medium text-slate-900 mt-2">
+        <h2 className="text-3xl font-serif tracking-tight text-slate-900 mt-2">
           {receiptData.roll_code}: {isPass ? 'APPROVED (PASS)' : isRework ? 'NEEDS REPAIR (REWORK)' : 'SCRAPPED (REJECT)'}
         </h2>
         
@@ -203,7 +203,7 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
             <span>Back to Roll Details</span>
           </button>
           <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-medium text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-serif tracking-tight text-slate-900 tracking-tight">
               Quality Inspection Form
             </h1>
             <span className="px-3 py-1 rounded-xl bg-blue-50 text-blue-700 font-mono font-medium text-sm border border-blue-200">

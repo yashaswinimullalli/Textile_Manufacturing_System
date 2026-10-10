@@ -32,7 +32,7 @@ export default function QualityInspectorLayout({ children }: { children: React.R
               </span>
               <span className="text-xs text-slate-400">Morning A · Station 1</span>
             </div>
-            <h1 className="text-lg font-medium text-slate-900 mt-0.5">Inspection Desk</h1>
+            <h1 className="text-lg font-serif text-slate-900 mt-0.5">Inspection Desk</h1>
           </div>
         </div>
 
