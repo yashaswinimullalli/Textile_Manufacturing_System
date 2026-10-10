@@ -319,7 +319,7 @@ export default function StageInspectionTracker() {
         {/* ─── LEFT: 50 Yarn Rolls List ─────────────────────────────────── */}
         <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
           <div className="p-4 border-b border-slate-100">
-            <p className="text-xs font-medium text-slate-500 mb-1.5">50 Yarn Batches</p>
+            <p className="text-sm font-serif text-slate-800 tracking-tight mb-2">50 Yarn Batches</p>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -347,7 +347,7 @@ export default function StageInspectionTracker() {
                   }`}
                 >
                   <div className="min-w-0">
-                    <p className={`text-sm font-medium truncate ${isSelected ? 'text-teal-800' : 'text-slate-800'}`}>{roll.name}</p>
+                    <p className={`text-base font-serif truncate ${isSelected ? 'text-teal-800' : 'text-slate-800'}`}>{roll.name}</p>
                     <p className="text-xs text-slate-400 font-mono mt-0.5">{roll.code} · {roll.customer}</p>
                   </div>
                   <div className="shrink-0">
@@ -377,8 +377,8 @@ export default function StageInspectionTracker() {
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
                 <p className="text-xs font-mono text-slate-400 mb-0.5">{selectedRoll?.code}</p>
-                <h2 className="text-xl font-medium text-slate-900">{selectedRoll?.name}</h2>
-                <p className="text-sm text-slate-500 mt-1">{selectedRoll?.weight} · {selectedRoll?.color} · <span className="font-medium text-slate-700">{selectedRoll?.customer}</span></p>
+                <h2 className="text-2xl font-serif text-slate-900 tracking-tight">{selectedRoll?.name}</h2>
+                <p className="text-sm text-slate-500 mt-1 font-sans">{selectedRoll?.weight} · {selectedRoll?.color} · <span className="font-medium text-slate-700">{selectedRoll?.customer}</span></p>
                 <p className="text-xs text-slate-400 font-mono mt-1">Order: {selectedRoll?.orderRef}</p>
               </div>
               <div className="shrink-0">
@@ -419,8 +419,8 @@ export default function StageInspectionTracker() {
 
           {/* ─── Vertical Stage Roadmap Card ──────────────────────────── */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <h3 className="text-sm font-medium text-slate-700 mb-5 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-teal-600" />
+            <h3 className="text-lg font-serif text-slate-800 mb-5 flex items-center gap-2">
+              <Layers className="w-5 h-5 text-teal-600" />
               Manufacturing Stage Journey
             </h3>
             <div className="relative">
@@ -462,8 +462,8 @@ export default function StageInspectionTracker() {
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="text-xs font-mono text-slate-400 shrink-0">{String(stage.seq).padStart(2, '0')}</span>
                             <div className="min-w-0">
-                              <p className={`text-sm font-medium ${isActive ? stage.accentClass : 'text-slate-800'}`}>{stage.label}</p>
-                              <p className="text-xs text-slate-500 mt-0.5">{stage.description}</p>
+                              <p className={`text-base font-serif ${isActive ? stage.accentClass : 'text-slate-800'}`}>{stage.label}</p>
+                              <p className="text-xs text-slate-500 mt-0.5 font-sans">{stage.description}</p>
                             </div>
                           </div>
                           <div className="shrink-0 flex items-center gap-2">
@@ -610,15 +610,15 @@ export default function StageInspectionTracker() {
 
           {/* ─── Journey Summary ──────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <h3 className="text-sm font-medium text-slate-700 mb-4">Fabric Journey at a Glance</h3>
+            <h3 className="text-lg font-serif text-slate-800 mb-4 tracking-tight">Fabric Journey at a Glance</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {STAGES.map((stage) => {
                 const s = stages[stage.id];
                 return (
                   <div key={stage.id} className={`rounded-xl border p-3 text-center ${statusColors(s.status)}`}>
                     <div className="flex justify-center mb-1.5">{statusIcon(s.status)}</div>
-                    <p className="text-xs font-medium text-slate-700">{stage.label}</p>
-                    <p className={`text-[11px] mt-0.5 font-medium ${s.status === 'passed' ? 'text-emerald-600' : s.status === 'rework' ? 'text-amber-600' : s.status === 'rejected' ? 'text-red-600' : 'text-slate-400'}`}>
+                    <p className="text-sm font-serif text-slate-700">{stage.label}</p>
+                    <p className={`text-[11px] mt-0.5 font-sans font-medium ${s.status === 'passed' ? 'text-emerald-600' : s.status === 'rework' ? 'text-amber-600' : s.status === 'rejected' ? 'text-red-600' : 'text-slate-400'}`}>
                       {statusLabel(s.status)}
                     </p>
                     {s.records.length > 0 && (

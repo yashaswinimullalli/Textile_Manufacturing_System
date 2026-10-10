@@ -152,9 +152,9 @@ export default function OwnerDashboard() {
     <div className="max-w-6xl space-y-8 font-sans">
       
       {/* ─── Page Header ──────────────────────────────────────────────────────── */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-medium text-slate-900">Owner Dashboard</h1>
-        <p className="text-sm text-slate-500 mt-1">Financial overview, comprehensive calendar, and workforce management.</p>
+      <div className="mb-8">
+        <h1 className="text-3xl font-serif text-slate-900 tracking-tight">Owner Dashboard</h1>
+        <p className="text-sm text-slate-500 mt-1 font-sans">Financial overview, comprehensive calendar, and workforce management.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -167,8 +167,8 @@ export default function OwnerDashboard() {
                 <CalendarIcon className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-xl font-medium text-slate-800">Financial Calendar</h2>
-                <p className="text-xs text-slate-500">Track daily profits and expenses.</p>
+                <h2 className="text-xl font-serif text-slate-800">Financial Calendar</h2>
+                <p className="text-xs text-slate-500 font-sans">Track daily profits and expenses.</p>
               </div>
             </div>
             
@@ -253,8 +253,8 @@ export default function OwnerDashboard() {
                 <TrendingUp className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-medium text-slate-800">Daily Financial Report</h2>
-                <p className="text-xs text-slate-500 font-mono">
+                <h2 className="text-xl font-serif text-slate-800">Daily Financial Report</h2>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">
                   {selectedDate.day} {MONTHS[selectedDate.month]} {selectedDate.year}
                 </p>
               </div>
@@ -285,8 +285,8 @@ export default function OwnerDashboard() {
           <div className={`flex justify-between items-center p-5 rounded-xl border mt-6 ${
             activeDayData.netProfit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'
           }`}>
-            <span className={`text-sm font-medium ${activeDayData.netProfit >= 0 ? 'text-emerald-900' : 'text-rose-900'}`}>Net Daily Profit</span>
-            <span className={`text-2xl font-medium ${activeDayData.netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+            <span className={`text-sm font-medium uppercase tracking-wider ${activeDayData.netProfit >= 0 ? 'text-emerald-900' : 'text-rose-900'}`}>Net Daily Profit</span>
+            <span className={`text-2xl font-serif ${activeDayData.netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
               {formatCurrency(activeDayData.netProfit)}
             </span>
           </div>
@@ -300,8 +300,8 @@ export default function OwnerDashboard() {
             <Briefcase className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-medium text-slate-800">Workforce & Departments</h2>
-            <p className="text-sm text-slate-500">Manage all factory employees and print daily wage distributions.</p>
+            <h2 className="text-2xl font-serif text-slate-800">Workforce & Departments</h2>
+            <p className="text-sm text-slate-500 font-sans mt-0.5">Manage all factory employees and print daily wage distributions.</p>
           </div>
         </div>
         <Link 
@@ -321,34 +321,34 @@ export default function OwnerDashboard() {
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
             <div>
-              <h2 className="text-xl font-medium text-slate-800">Monthly Summary</h2>
-              <p className="text-sm text-slate-500">Total aggregation for {MONTHS[currentMonthIdx]} {currentYear}</p>
+              <h2 className="text-2xl font-serif text-slate-800">Monthly Summary</h2>
+              <p className="text-sm text-slate-500 font-sans mt-0.5">Total aggregation for {MONTHS[currentMonthIdx]} {currentYear}</p>
             </div>
             <span className="px-4 py-1.5 rounded-full bg-indigo-100 text-indigo-700 font-medium text-xs tracking-wider uppercase">
               Financial Overview
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            <div className="bg-white p-4 lg:p-5 rounded-xl border border-slate-200">
-              <p className="text-xs lg:text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
-              <p className="text-xl lg:text-2xl font-medium text-slate-800 break-words">{formatCurrency(monthlyTotals.revenue)}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-2">
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Total Revenue</p>
+              <p className="text-2xl font-serif text-slate-800 break-words">{formatCurrency(monthlyTotals.revenue)}</p>
             </div>
-            <div className="bg-white p-4 lg:p-5 rounded-xl border border-slate-200">
-              <p className="text-xs lg:text-sm font-medium text-slate-500 mb-1">Total Materials</p>
-              <p className="text-xl lg:text-2xl font-medium text-slate-600 break-words">-{formatCurrency(monthlyTotals.materials)}</p>
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Total Materials</p>
+              <p className="text-2xl font-serif text-slate-600 break-words">-{formatCurrency(monthlyTotals.materials)}</p>
             </div>
-            <div className="bg-white p-4 lg:p-5 rounded-xl border border-slate-200">
-              <p className="text-xs lg:text-sm font-medium text-slate-500 mb-1">Total Wages Paid</p>
-              <p className="text-xl lg:text-2xl font-medium text-slate-600 break-words">-{formatCurrency(monthlyTotals.wages)}</p>
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Total Wages Paid</p>
+              <p className="text-2xl font-serif text-slate-600 break-words">-{formatCurrency(monthlyTotals.wages)}</p>
             </div>
-            <div className="bg-white p-4 lg:p-5 rounded-xl border border-slate-200">
-              <p className="text-xs lg:text-sm font-medium text-slate-500 mb-1">Maintenance</p>
-              <p className="text-xl lg:text-2xl font-medium text-slate-600 break-words">-{formatCurrency(monthlyTotals.maintenance)}</p>
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Maintenance</p>
+              <p className="text-2xl font-serif text-slate-600 break-words">-{formatCurrency(monthlyTotals.maintenance)}</p>
             </div>
-            <div className="bg-indigo-50 p-4 lg:p-5 rounded-xl border border-indigo-100 flex flex-col justify-center">
-              <p className="text-xs lg:text-sm font-medium text-indigo-800 mb-1">Net Monthly Profit</p>
-              <p className="text-xl lg:text-2xl font-medium text-indigo-700 truncate">{formatCurrency(monthlyTotals.profit)}</p>
+            <div className="bg-indigo-50 p-5 rounded-xl border border-indigo-100 flex flex-col justify-center shadow-sm">
+              <p className="text-xs font-medium text-indigo-800 uppercase tracking-wider mb-2">Net Monthly Profit</p>
+              <p className="text-2xl font-serif text-indigo-700 truncate">{formatCurrency(monthlyTotals.profit)}</p>
             </div>
           </div>
         </div>
