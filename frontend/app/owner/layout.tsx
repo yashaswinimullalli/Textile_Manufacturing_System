@@ -10,13 +10,6 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
       
       {/* ─── Very Subtle Back Link ───────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto mb-4">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-slate-400 hover:text-slate-600 transition text-sm font-medium"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Hub</span>
-        </Link>
       </div>
 
       {/* ─── Main Content ────────────────────────────────────────────────────── */}
