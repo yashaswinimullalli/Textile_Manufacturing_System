@@ -4,7 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Factory,
   ShieldCheck,
   Building2,
   Package,
@@ -29,18 +28,10 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="w-64 bg-slate-900 text-slate-200 min-h-screen flex flex-col border-r border-slate-800 font-sans">
       {/* Brand Header */}
-      <div className="p-5 border-b border-slate-800 flex items-center gap-3">
-        <div className="h-9 w-9 rounded-lg bg-teal-600 flex items-center justify-center text-white font-bold shadow-md">
-          <Factory className="h-5 w-5" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-base tracking-wide text-white">FabricTrace</span>
-            <span className="text-[10px] bg-teal-950 text-teal-400 border border-teal-800 px-1.5 py-0.2 rounded font-semibold uppercase">
-              MVP
-            </span>
-          </div>
-        </div>
+      <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+        <Link href="/" className="font-black text-xl tracking-wider text-white hover:text-teal-400 transition-colors">
+          VASTRA
+        </Link>
       </div>
 
       {/* Main Navigation Modules */}

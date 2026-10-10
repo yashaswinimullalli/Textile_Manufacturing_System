@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Sidebar } from '@/components/layout/Sidebar';
 export const metadata: Metadata = {
-  title: 'FabricTrace — Textile Manufacturing Operations System',
+  title: 'VASTRA — Textile Manufacturing Operations System',
   description: 'Role-based textile factory operations system connecting yarn inventory, production orders, machine events, and downtime tracking.',
 };
 
