@@ -676,24 +676,28 @@ export default function QualityInspectionsPage() {
       )}
 
       {/* Inspection Modal */}
-      <InspectionModal
-        batch={inspectingBatch}
-        isOpen={Boolean(inspectingBatch)}
-        onClose={() => setInspectingBatch(null)}
-        onSuccess={handleInspectionSuccess}
-        isReinspection={isReinspectionMode}
-      />
+      {Boolean(inspectingBatch) && (
+        <InspectionModal
+          batch={inspectingBatch}
+          isOpen={Boolean(inspectingBatch)}
+          onClose={() => setInspectingBatch(null)}
+          onSuccess={handleInspectionSuccess}
+          isReinspection={isReinspectionMode}
+        />
+      )}
 
       {/* Inspection History Modal */}
-      <InspectionHistoryModal
-        batch={historyBatch}
-        isOpen={Boolean(historyBatch)}
-        onClose={() => setHistoryBatch(null)}
-        onTriggerReinspection={(b) => {
-          setInspectingBatch(b);
-          setIsReinspectionMode(true);
-        }}
-      />
+      {Boolean(historyBatch) && (
+        <InspectionHistoryModal
+          batch={historyBatch}
+          isOpen={Boolean(historyBatch)}
+          onClose={() => setHistoryBatch(null)}
+          onTriggerReinspection={(b) => {
+            setInspectingBatch(b);
+            setIsReinspectionMode(true);
+          }}
+        />
+      )}
     </div>
   );
 }

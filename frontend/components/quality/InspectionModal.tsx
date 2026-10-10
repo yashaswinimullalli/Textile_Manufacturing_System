@@ -73,8 +73,6 @@ export const InspectionModal: React.FC<InspectionModalProps> = ({
   onSuccess,
   isReinspection = false,
 }) => {
-  if (!isOpen || !batch) return null;
-
   // Visual inspection state
   const [packagingCondition, setPackagingCondition] = useState<PackagingCondition>('Acceptable');
   const [visibleContamination, setVisibleContamination] = useState<ContaminationObserved>('Not observed');
@@ -86,13 +84,11 @@ export const InspectionModal: React.FC<InspectionModalProps> = ({
 
   // Laboratory / Specification checks
   const [specChecks, setSpecChecks] = useState<SpecCheckItem[]>([]);
-  const [supplierCertRef, setSupplierCertRef] = useState(batch.certificate_reference || 'COA-' + batch.batch_code.slice(-6));
+  const [supplierCertRef, setSupplierCertRef] = useState('');
 
   // Disposition & quantity state
-  const [decision, setDecision] = useState<InspectionDisposition>(
-    isReinspection ? 'PASSED' : (batch.inspection_status === 'ON_HOLD' ? 'ON_HOLD' : 'PASSED')
-  );
-  const [qtyApproved, setQtyApproved] = useState<string>(String(batch.quantity_received));
+  const [decision, setDecision] = useState<InspectionDisposition>('PASSED');
+  const [qtyApproved, setQtyApproved] = useState<string>('0');
   const [qtyHeld, setQtyHeld] = useState<string>('0');
   const [qtyRejected, setQtyRejected] = useState<string>('0');
   const [decisionReason, setDecisionReason] = useState('');
@@ -106,18 +102,29 @@ export const InspectionModal: React.FC<InspectionModalProps> = ({
   // Initialize checks when batch changes
   useEffect(() => {
     if (batch) {
+      setPackagingCondition('Acceptable');
+      setVisibleContamination('Not observed');
+      setColourConsistency('Acceptable');
+      setYarnAppearance('Acceptable');
+      setVisualRemarks('');
+      setDefectDescription('');
       setSpecChecks(getDefaultSpecChecksForType(batch.yarn_type));
-      setQtyApproved(String(batch.quantity_received));
+      setSupplierCertRef(batch.certificate_reference || 'COA-' + (batch.batch_code ? batch.batch_code.slice(-6) : '001'));
+      setQtyApproved(String(batch.quantity_received || 0));
       setQtyHeld('0');
       setQtyRejected('0');
-      setDecision(batch.inspection_status === 'ON_HOLD' ? 'ON_HOLD' : 'PASSED');
+      setDecision(isReinspection ? 'PASSED' : (batch.inspection_status === 'ON_HOLD' ? 'ON_HOLD' : 'PASSED'));
       setDecisionReason('Incoming inspection completed according to factory quality assurance manual.');
+      if (isReinspection) {
+        setReinspectionReason('Reinspected following supplier laboratory test certificate receipt');
+      }
     }
-  }, [batch]);
+  }, [batch, isReinspection]);
 
   // Adjust quantities automatically when disposition switches
   const handleDecisionChange = (newDecision: InspectionDisposition) => {
     setDecision(newDecision);
+    if (!batch) return;
     const total = batch.quantity_received;
 
     if (newDecision === 'PASSED') {
@@ -170,6 +177,7 @@ export const InspectionModal: React.FC<InspectionModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!batch) return;
     setErrorMessage(null);
 
     if (!inspectorName.trim()) {
@@ -228,6 +236,8 @@ export const InspectionModal: React.FC<InspectionModalProps> = ({
       setSubmitting(false);
     }
   };
+
+  if (!isOpen || !batch) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
