@@ -7,12 +7,11 @@ import {
   Truck, 
   Package, 
   Lock, 
-  RotateCcw, 
-  Search, 
   ArrowLeft, 
   Layers, 
   CheckCircle2, 
-  XCircle 
+  XCircle,
+  Send
 } from "lucide-react";
 import { useFabricTrace } from "@/context/FabricTraceContext";
 
@@ -26,8 +25,8 @@ function playSuccessTick() {
     const gain = ctx.createGain();
 
     osc.type = "sine";
-    osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
-    osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.12); // E6
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.12);
 
     gain.gain.setValueAtTime(0.2, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
@@ -46,6 +45,8 @@ interface LoadedPackage {
   id: string;
   rollCode: string;
   fabricType: string;
+  weight: number;
+  value: number;
 }
 
 export default function DispatchScanner() {
@@ -54,9 +55,12 @@ export default function DispatchScanner() {
   const [scannedInput, setScannedInput] = useState("");
   const [scanState, setScanState] = useState<"idle" | "pass" | "reject">("idle");
   const [loadedPackages, setLoadedPackages] = useState<LoadedPackage[]>([
-    { id: "pkg-1", rollCode: "#1001", fabricType: "100% Cotton" }
+    { id: "pkg-1", rollCode: "#1001", fabricType: "100% Combed Cotton", weight: 125, value: 45000 },
+    { id: "pkg-2", rollCode: "#1005", fabricType: "Modal Satin Blend", weight: 95, value: 68000 }
   ]);
   const [currentPassRoll, setCurrentPassRoll] = useState<string | null>(null);
+  const [isDispatching, setIsDispatching] = useState(false);
+  const [dispatchSuccess, setDispatchSuccess] = useState(false);
 
   // Scan roll handler
   const handleScan = async (codeToScan?: string) => {
@@ -67,12 +71,10 @@ export default function DispatchScanner() {
     const formattedId = `#${cleanNum}`;
     const formattedCode = `ROLL-${cleanNum}`;
 
-    // 1. Check in real-time Global State
     const foundRoll = fabricRolls.find(
       r => r.rollId === formattedId || r.roll_code === formattedCode
     );
 
-    // Also call backend API to enforce Zod backend security
     let apiStatus = "UNKNOWN";
     try {
       const res = await fetch("http://localhost:5000/api/dispatch", {
@@ -80,7 +82,6 @@ export default function DispatchScanner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roll_code: formattedCode })
       });
-      const data = await res.json();
       if (!res.ok) {
         apiStatus = "BLOCKED";
       } else {
@@ -90,8 +91,6 @@ export default function DispatchScanner() {
       // If server unreachable, use global state
     }
 
-    // Determine if roll can be loaded:
-    // Must be PASSED (not REJECTED, not REWORK, not uninspected)
     const isPass = 
       (foundRoll && foundRoll.status === "PASSED") ||
       apiStatus === "PASS";
@@ -101,7 +100,6 @@ export default function DispatchScanner() {
       apiStatus === "BLOCKED";
 
     if (isPass && !isReject) {
-      // ─── GREEN LIGHT: SUCCESS STATE ──────────────────────────────────────
       setScanState("pass");
       setCurrentPassRoll(formattedId);
       playSuccessTick();
@@ -109,240 +107,257 @@ export default function DispatchScanner() {
       const newPkg: LoadedPackage = {
         id: `pkg-${Date.now()}`,
         rollCode: formattedId,
-        fabricType: foundRoll?.fabricType || "Cloth Roll"
+        fabricType: foundRoll?.fabricType || "Cloth Roll",
+        weight: Math.floor(Math.random() * 50) + 80,
+        value: Math.floor(Math.random() * 50000) + 30000
       };
 
       setLoadedPackages(prev => [newPkg, ...prev]);
       setScannedInput("");
 
-      // Return to normal screen border after 3 seconds
       setTimeout(() => {
         setScanState("idle");
-      }, 3000);
+      }, 2500);
 
     } else {
-      // ─── RED ALARM: ERROR STATE ──────────────────────────────────────────
       setScanState("reject");
     }
   };
 
-  // Clear freeze screen
   const handleClearAlarm = () => {
     setScanState("idle");
     setScannedInput("");
   };
 
+  const handleDispatch = () => {
+    if (loadedPackages.length === 0) return;
+    setIsDispatching(true);
+    
+    // Simulate truck driving away
+    setTimeout(() => {
+      setLoadedPackages([]);
+      setIsDispatching(false);
+      setDispatchSuccess(true);
+      
+      setTimeout(() => {
+        setDispatchSuccess(false);
+      }, 3000);
+    }, 1500);
+  };
+
+  const totalWeight = loadedPackages.reduce((acc, p) => acc + p.weight, 0);
+  const totalValue = loadedPackages.reduce((acc, p) => acc + p.value, 0);
+
   return (
-    <div className={`min-h-screen font-sans transition-all duration-300 select-none ${
-      scanState === "pass" ? "border-[16px] border-emerald-500 bg-white" : "border-[16px] border-transparent bg-slate-50"
+    <div className={`min-h-screen font-sans transition-all duration-500 select-none ${
+      scanState === "pass" ? "bg-emerald-50" : "bg-slate-50"
     }`}>
       
-      {/* ─── FULLSCREEN RED ALARM FREEZE (Feature 3 Requirement) ─────────────── */}
+      {/* ─── FULLSCREEN RED ALARM FREEZE ─────────────────────────────────────── */}
       <AnimatePresence>
         {scanState === "reject" && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-red-600 flex flex-col items-center justify-center p-8 text-center text-white"
+            className="fixed inset-0 z-50 bg-red-600/95 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center text-white"
           >
-            <div className="max-w-3xl flex flex-col items-center space-y-8 animate-in zoom-in-95">
-              
-              {/* Giant Lock Icon */}
-              <div className="w-36 h-36 rounded-3xl bg-white/10 backdrop-blur-md border-8 border-white flex items-center justify-center shadow-2xl">
-                <Lock className="w-24 h-24 text-white" />
+            <div className="max-w-2xl flex flex-col items-center space-y-6 animate-in zoom-in-95">
+              <div className="w-24 h-24 rounded-2xl bg-white/10 flex items-center justify-center">
+                <Lock className="w-12 h-12 text-white" />
               </div>
-
-              {/* Massive White Text: "STOP: BAD ROLL. CANNOT LOAD." */}
-              <div className="space-y-4">
-                <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-tight uppercase font-mono">
-                  STOP: BAD ROLL.<br />CANNOT LOAD.
-                </h1>
-                <p className="text-xl sm:text-2xl font-bold text-red-100">
-                  This roll did not pass quality check. Take it off the truck.
+              <div className="space-y-3">
+                <h1 className="text-4xl font-serif tracking-tight">Quality Block Active</h1>
+                <p className="text-lg font-light text-red-100">
+                  This roll did not pass quality inspection and cannot be loaded onto the truck.
                 </p>
               </div>
-
-              {/* Giant CLEAR Button to Unfreeze Screen */}
               <button
                 onClick={handleClearAlarm}
-                className="px-16 py-8 rounded-3xl bg-white hover:bg-slate-100 active:scale-95 text-red-600 text-3xl sm:text-4xl font-black tracking-wider uppercase shadow-2xl transition cursor-pointer border-4 border-white"
+                className="mt-8 px-10 py-4 rounded-xl bg-white text-red-600 hover:bg-slate-100 active:scale-95 text-lg font-medium tracking-wide transition shadow-lg"
               >
-                CLEAR
+                Clear Scanner
               </button>
-
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ─── Normal Loading Dock Screen ─────────────────────────────────────── */}
-      <div className="p-6 sm:p-10 max-w-6xl mx-auto space-y-8">
+      <div className="p-6 sm:p-10 max-w-5xl mx-auto space-y-8">
         
         {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border-2 border-slate-200 shadow-sm">
-          
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
             <Link
               href="/"
-              className="p-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-2 cursor-pointer"
+              className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition mb-2"
             >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-bold text-sm">Home</span>
+              <ArrowLeft className="w-4 h-4" /> Back to Dashboard
             </Link>
-
-            <div>
-              <span className="text-xs font-black uppercase tracking-wider text-slate-400 block">
-                Loading Dock UI
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                Red-Light Scanner
-              </h2>
-            </div>
+            <h2 className="text-3xl font-serif text-slate-900 tracking-tight">
+              Loading Dock
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">Scan approved rolls and dispatch deliveries.</p>
           </div>
 
           <Link
             href="/quality-inspector"
-            className="px-6 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-black flex items-center gap-2 cursor-pointer transition"
+            className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium flex items-center gap-2 transition"
           >
-            <Layers className="w-5 h-5" />
-            <span>Check Fabric (Stamp & Tag)</span>
+            <Layers className="w-4 h-4" />
+            <span>Quality Inspection</span>
           </Link>
-
         </div>
 
-        {/* Success Green Light Banner */}
-        {scanState === "pass" && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-6 rounded-3xl bg-emerald-500 text-white flex items-center justify-between shadow-xl"
-          >
-            <div className="flex items-center gap-4">
-              <CheckCircle2 className="w-10 h-10" />
+        {/* Dispatch Success Banner */}
+        <AnimatePresence>
+          {dispatchSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 flex items-center gap-3 shadow-sm"
+            >
+              <CheckCircle2 className="w-5 h-5 text-teal-600" />
+              <span className="text-sm font-medium">Truck dispatched successfully! The shipment is on its way.</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* LEFT: Scanner Panel */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col h-full">
+              <h3 className="text-lg font-serif text-slate-800 mb-6">Scan Roll Barcode</h3>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="e.g. 1001 or #1001"
+                  value={scannedInput}
+                  onChange={(e) => setScannedInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleScan()}
+                  className="w-full text-xl font-mono p-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition"
+                  autoFocus
+                />
+                <button
+                  onClick={() => handleScan()}
+                  className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-base font-medium shadow-sm transition active:scale-[0.98]"
+                >
+                  Scan Package
+                </button>
+              </div>
+
+              {/* Quick-Test Buttons */}
+              <div className="mt-8 pt-6 border-t border-slate-100">
+                <p className="text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">Simulator</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => handleScan("#1001")}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-medium transition"
+                  >
+                    Simulate Pass
+                  </button>
+                  <button
+                    onClick={() => handleScan("#1042")}
+                    className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-medium transition"
+                  >
+                    Simulate Reject
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT: Truck & Load Summary */}
+          <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 flex flex-col justify-between overflow-hidden relative">
+            
+            <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-6">
               <div>
-                <h3 className="text-2xl font-black tracking-tight">
-                  GOOD TO LOAD - PUT ON TRUCK
-                </h3>
-                <p className="text-sm font-bold text-emerald-100">
-                  Roll {currentPassRoll} passed quality check.
+                <h3 className="text-lg font-serif text-slate-800">Dispatch Manifest</h3>
+                <p className="text-sm text-slate-500 mt-1">Today's outgoing shipment</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Total Value</p>
+                <p className="text-2xl font-serif text-indigo-700">
+                  ₹{totalValue.toLocaleString('en-IN')}
                 </p>
               </div>
             </div>
-            <Package className="w-10 h-10 animate-bounce" />
-          </motion.div>
-        )}
 
-        {/* ─── MASSIVE TEXT INPUT: "Scan Roll ID" ──────────────────────────────── */}
-        <div className="bg-white rounded-3xl p-8 sm:p-12 border-4 border-slate-300 shadow-xl space-y-6">
-          
-          <label className="block text-2xl sm:text-3xl font-black text-slate-900 text-center uppercase tracking-tight">
-            Scan Roll ID
-          </label>
-
-          <div className="flex flex-col sm:flex-row gap-4">
-            <input
-              type="text"
-              placeholder="e.g. 1001 or #1001"
-              value={scannedInput}
-              onChange={(e) => setScannedInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleScan()}
-              className="flex-1 text-center sm:text-left text-3xl sm:text-4xl font-mono font-black p-6 sm:p-8 rounded-3xl border-4 border-slate-300 bg-slate-50 text-slate-900 placeholder-slate-300 focus:outline-none focus:border-slate-900"
-              autoFocus
-            />
-
-            <button
-              onClick={() => handleScan()}
-              className="px-10 py-6 sm:py-8 rounded-3xl bg-slate-900 hover:bg-slate-800 text-white text-2xl font-black tracking-wide shadow-xl transition cursor-pointer"
-            >
-              SCAN
-            </button>
-          </div>
-
-          {/* Quick-Test Buttons for Factory / Demo */}
-          <div className="pt-4 border-t-2 border-slate-100 flex flex-wrap items-center justify-center gap-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2">
-              Quick Test:
-            </span>
-            <button
-              onClick={() => handleScan("#1001")}
-              className="px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-300 text-emerald-800 text-xs font-black cursor-pointer"
-            >
-              Test Pass Roll (#1001)
-            </button>
-            <button
-              onClick={() => handleScan("#1042")}
-              className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border-2 border-rose-300 text-rose-800 text-xs font-black cursor-pointer"
-            >
-              Test Reject Roll (#1042)
-            </button>
-            <button
-              onClick={() => handleScan("#1028")}
-              className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border-2 border-rose-300 text-rose-800 text-xs font-black cursor-pointer"
-            >
-              Test Reject Roll (#1028)
-            </button>
-          </div>
-
-        </div>
-
-        {/* ─── LARGE TRUCK ICON GRAPHIC & CARGO BED ───────────────────────────── */}
-        <div className="bg-slate-900 rounded-3xl p-8 sm:p-12 text-white border-4 border-slate-800 shadow-2xl space-y-8">
-          
-          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-            <div className="flex items-center gap-3">
-              <Truck className="w-8 h-8 text-emerald-400" />
-              <span className="text-xl font-black tracking-tight">
-                DELIVERY TRUCK
-              </span>
-            </div>
-            <span className="text-sm font-mono font-bold text-slate-400">
-              {loadedPackages.length} Rolls Loaded
-            </span>
-          </div>
-
-          {/* Truck Cargo Bed with Dropped Packages */}
-          <div className="min-h-[180px] bg-slate-950 rounded-2xl p-6 border-4 border-dashed border-slate-800 flex flex-wrap gap-4 items-center">
-            {loadedPackages.length === 0 ? (
-              <div className="w-full text-center text-slate-600 font-bold text-base py-6">
-                Truck is empty. Scan passed rolls to load.
-              </div>
-            ) : (
-              loadedPackages.map((pkg, idx) => (
-                <motion.div
-                  key={pkg.id}
-                  initial={{ scale: 0, y: -40 }}
-                  animate={{ scale: 1, y: 0 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  className="w-28 h-28 rounded-2xl bg-slate-800 border-4 border-emerald-500 p-3 flex flex-col justify-between shadow-lg"
-                >
-                  <Package className="w-8 h-8 text-emerald-400" />
-                  <div>
-                    <span className="font-mono text-sm font-black text-white block">
-                      {pkg.rollCode}
-                    </span>
-                    <span className="text-[10px] text-slate-400 block truncate">
-                      {pkg.fabricType}
-                    </span>
+            {/* Truck Animation Container */}
+            <div className="relative min-h-[220px] bg-slate-50 rounded-xl border border-slate-200 p-6 flex flex-col overflow-hidden">
+              <motion.div 
+                className="flex items-start gap-6 absolute inset-x-6 top-6"
+                initial={{ x: 0, opacity: 1 }}
+                animate={isDispatching ? { x: 800, opacity: 0 } : { x: 0, opacity: 1 }}
+                transition={{ duration: 1.5, ease: "easeInOut" }}
+              >
+                {/* Truck Cabin */}
+                <div className="shrink-0 flex flex-col items-center mt-4">
+                  <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl">
+                    <Truck className="w-8 h-8" />
                   </div>
-                </motion.div>
-              ))
-            )}
-          </div>
+                  <p className="text-xs font-medium text-slate-500 mt-2">{totalWeight} kg</p>
+                </div>
 
-          {/* Big Truck Wheels */}
-          <div className="flex justify-between px-12 pt-2">
-            <div className="flex gap-4">
-              <div className="w-12 h-12 rounded-full bg-slate-800 border-4 border-slate-700 shadow-inner"></div>
-              <div className="w-12 h-12 rounded-full bg-slate-800 border-4 border-slate-700 shadow-inner"></div>
+                {/* Cargo Area */}
+                <div className="flex-1">
+                  <div className="flex flex-wrap gap-3">
+                    {loadedPackages.length === 0 && !isDispatching ? (
+                      <div className="w-full text-center text-slate-400 text-sm py-8 border-2 border-dashed border-slate-200 rounded-xl">
+                        Ready to load packages
+                      </div>
+                    ) : (
+                      loadedPackages.map((pkg) => (
+                        <motion.div
+                          key={pkg.id}
+                          layout
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="w-24 bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col gap-1"
+                        >
+                          <Package className="w-5 h-5 text-indigo-500 mb-1" />
+                          <span className="font-mono text-xs font-medium text-slate-800">
+                            {pkg.rollCode}
+                          </span>
+                          <span className="text-[10px] text-slate-500 truncate">
+                            {pkg.fabricType}
+                          </span>
+                        </motion.div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </motion.div>
             </div>
-            <div className="w-12 h-12 rounded-full bg-slate-800 border-4 border-slate-700 shadow-inner"></div>
+
+            {/* Action Bar */}
+            <div className="mt-8 flex justify-between items-center pt-2">
+              <div className="flex gap-4 items-center">
+                <div>
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-0.5">Packages</p>
+                  <p className="text-lg font-medium text-slate-800">{loadedPackages.length}</p>
+                </div>
+                <div className="w-px h-8 bg-slate-200"></div>
+                <div>
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-0.5">Est. Weight</p>
+                  <p className="text-lg font-medium text-slate-800">{totalWeight} kg</p>
+                </div>
+              </div>
+              <button
+                onClick={handleDispatch}
+                disabled={loadedPackages.length === 0 || isDispatching}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-medium transition shadow-sm"
+              >
+                <Send className="w-4 h-4" />
+                <span>Dispatch Truck</span>
+              </button>
+            </div>
+
           </div>
-
         </div>
-
       </div>
-
     </div>
   );
 }
