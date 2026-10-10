@@ -83,8 +83,12 @@ export default function EmployeeDirectory() {
           {EMPLOYEES.map((emp, i) => (
             <div 
               key={i} 
-              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:-translate-y-1 hover:shadow-lg hover:border-indigo-200 transition-all duration-300 group flex flex-col justify-between"
+              className="relative bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:-translate-y-1 hover:shadow-lg hover:border-indigo-200 transition-all duration-300 group flex flex-col justify-between"
             >
+              <button className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition opacity-0 group-hover:opacity-100" title="Edit Employee">
+                <Pencil className="w-4 h-4" />
+              </button>
+
               <div>
                 <div className="flex flex-col items-center text-center gap-4 mb-5">
                   <div className="w-16 h-16 rounded-full bg-slate-50 text-slate-500 flex items-center justify-center font-serif text-2xl border border-slate-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-colors shrink-0">
@@ -99,14 +103,9 @@ export default function EmployeeDirectory() {
 
               <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                 <span className="text-xs font-medium text-slate-400 uppercase tracking-wider font-sans">Wage</span>
-                <div className="flex items-center gap-3">
-                  <button className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition" title="Edit Employee">
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <span className="text-lg font-serif text-indigo-700 font-medium">
-                    {formatCurrency(emp.wage)}
-                  </span>
-                </div>
+                <span className="text-lg font-serif text-indigo-700 font-medium">
+                  {formatCurrency(emp.wage)}
+                </span>
               </div>
             </div>
           ))}
