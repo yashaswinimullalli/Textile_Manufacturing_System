@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description: 'Role-based textile factory operations system connecting yarn inventory, production orders, machine events, and downtime tracking.',
 };
 
+import { FabricTraceProvider } from '@/context/FabricTraceContext';
+
 export default function RootLayout({
   children,
 }: {
@@ -16,13 +18,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-slate-50 flex">
-        <Sidebar />
-        <div className="flex-1 flex flex-col min-w-0">
-          <Header />
-          <main className="flex-1 p-6 overflow-y-auto">
-            {children}
-          </main>
-        </div>
+        <FabricTraceProvider>
+          <Sidebar />
+          <div className="flex-1 flex flex-col min-w-0">
+            <Header />
+            <main className="flex-1 p-6 overflow-y-auto">
+              {children}
+            </main>
+          </div>
+        </FabricTraceProvider>
       </body>
     </html>
   );
