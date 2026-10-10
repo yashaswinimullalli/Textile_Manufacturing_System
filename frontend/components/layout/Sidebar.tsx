@@ -44,30 +44,6 @@ export const Sidebar: React.FC = () => {
         </div>
         
         <Link
-          href="/quality-inspector"
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-            isLinkActive('/quality-inspector')
-              ? 'bg-teal-600 text-white shadow-md'
-              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <ShieldCheck className={`h-5 w-5 ${isLinkActive('/quality-inspector') ? 'text-white' : 'text-emerald-400'}`} />
-          <span>Quality Inspector</span>
-        </Link>
-
-        <Link
-          href="/owner"
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-            isLinkActive('/owner')
-              ? 'bg-teal-600 text-white shadow-md'
-              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <Building2 className={`h-5 w-5 ${isLinkActive('/owner') ? 'text-white' : 'text-amber-400'}`} />
-          <span>Owner / Accounts</span>
-        </Link>
-
-        <Link
           href="/storekeeper/inventory"
           className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
             isLinkActive('/storekeeper')
@@ -89,6 +65,30 @@ export const Sidebar: React.FC = () => {
         >
           <Layers className={`h-5 w-5 ${isLinkActive('/production') ? 'text-white' : 'text-sky-400'}`} />
           <span>Production Supervisor</span>
+        </Link>
+
+        <Link
+          href="/quality-inspector"
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+            isLinkActive('/quality-inspector')
+              ? 'bg-teal-600 text-white shadow-md'
+              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+          }`}
+        >
+          <ShieldCheck className={`h-5 w-5 ${isLinkActive('/quality-inspector') ? 'text-white' : 'text-emerald-400'}`} />
+          <span>Quality Inspector</span>
+        </Link>
+
+        <Link
+          href="/owner"
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+            isLinkActive('/owner')
+              ? 'bg-teal-600 text-white shadow-md'
+              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+          }`}
+        >
+          <Building2 className={`h-5 w-5 ${isLinkActive('/owner') ? 'text-white' : 'text-amber-400'}`} />
+          <span>Owner / Accounts</span>
         </Link>
       </div>
 

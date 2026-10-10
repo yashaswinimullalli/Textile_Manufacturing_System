@@ -9,8 +9,10 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
-  Briefcase
+  Briefcase,
+  ExternalLink
 } from 'lucide-react';
+import Link from 'next/link';
 import { formatCurrency } from '@/lib/formatters';
 
 // ─── Data Generation ─────────────────────────────────────────────────────────
@@ -104,8 +106,6 @@ export default function OwnerDashboard() {
     month: currentMonthIdx,
     day: 10
   });
-
-  const [activeDeptIndex, setActiveDeptIndex] = useState(0);
 
   // Calendar logic
   const totalDaysInMonth = new Date(currentYear, currentMonthIdx + 1, 0).getDate();
@@ -293,74 +293,24 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
-      {/* ─── Departments & Employees ────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
-        <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
-          <div className="p-2.5 bg-indigo-50 text-indigo-700 rounded-lg">
-            <Briefcase className="w-5 h-5" />
+      {/* ─── Workforce Link ───────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-indigo-50 text-indigo-700 rounded-xl">
+            <Briefcase className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-800">Departments & Workforce</h2>
-            <p className="text-xs text-slate-500">Manage factory employees and daily wage distributions.</p>
+            <h2 className="text-xl font-bold text-slate-800">Workforce & Departments</h2>
+            <p className="text-sm text-slate-500">Manage all factory employees and print daily wage distributions.</p>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* Dept Sidebar */}
-          <div className="col-span-1 space-y-2">
-            {DEPARTMENTS.map((dept, idx) => (
-              <button
-                key={dept.name}
-                onClick={() => setActiveDeptIndex(idx)}
-                className={`w-full text-left px-4 py-3 rounded-xl border text-sm font-bold transition-all ${
-                  activeDeptIndex === idx 
-                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' 
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-indigo-300'
-                }`}
-              >
-                {dept.name}
-                <span className={`block text-xs font-normal mt-0.5 ${activeDeptIndex === idx ? 'text-indigo-100' : 'text-slate-400'}`}>
-                  {dept.employees.length} Employees
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Employee List */}
-          <div className="col-span-1 md:col-span-3">
-            <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-100 border-b border-slate-200 text-slate-600">
-                  <tr>
-                    <th className="py-3 px-6 font-bold">Employee Name</th>
-                    <th className="py-3 px-6 font-bold">Role</th>
-                    <th className="py-3 px-6 font-bold text-right">Daily Wage</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {DEPARTMENTS[activeDeptIndex].employees.map((emp, i) => (
-                    <tr key={i} className="hover:bg-white transition-colors">
-                      <td className="py-3 px-6 font-semibold text-slate-800 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
-                          {emp.name.charAt(0)}
-                        </div>
-                        {emp.name}
-                      </td>
-                      <td className="py-3 px-6 text-slate-600">{emp.role}</td>
-                      <td className="py-3 px-6 text-slate-800 font-mono font-medium text-right">₹{emp.wage}</td>
-                    </tr>
-                  ))}
-                  <tr className="bg-slate-100">
-                    <td colSpan={2} className="py-3 px-6 font-bold text-slate-800 text-right">Total Department Daily Wage</td>
-                    <td className="py-3 px-6 font-bold text-indigo-700 font-mono text-right">
-                      ₹{DEPARTMENTS[activeDeptIndex].employees.reduce((acc, emp) => acc + emp.wage, 0)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <Link 
+          href="/owner/employees"
+          className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-sm"
+        >
+          <span>View Employee Directory</span>
+          <ExternalLink className="w-4 h-4" />
+        </Link>
       </div>
 
       {/* ─── Monthly Summary ────────────────────────────────────────────────── */}
@@ -379,26 +329,26 @@ export default function OwnerDashboard() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            <div className="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
-              <p className="text-sm font-bold text-slate-400 mb-1">Total Revenue</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(monthlyTotals.revenue)}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            <div className="bg-slate-800/50 p-4 lg:p-5 rounded-xl border border-slate-700">
+              <p className="text-xs lg:text-sm font-bold text-slate-400 mb-1">Total Revenue</p>
+              <p className="text-xl lg:text-2xl font-bold text-white break-words">{formatCurrency(monthlyTotals.revenue)}</p>
             </div>
-            <div className="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
-              <p className="text-sm font-bold text-slate-400 mb-1">Total Materials</p>
-              <p className="text-2xl font-bold text-rose-400">-{formatCurrency(monthlyTotals.materials)}</p>
+            <div className="bg-slate-800/50 p-4 lg:p-5 rounded-xl border border-slate-700">
+              <p className="text-xs lg:text-sm font-bold text-slate-400 mb-1">Total Materials</p>
+              <p className="text-xl lg:text-2xl font-bold text-rose-400 break-words">-{formatCurrency(monthlyTotals.materials)}</p>
             </div>
-            <div className="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
-              <p className="text-sm font-bold text-slate-400 mb-1">Total Wages Paid</p>
-              <p className="text-2xl font-bold text-rose-400">-{formatCurrency(monthlyTotals.wages)}</p>
+            <div className="bg-slate-800/50 p-4 lg:p-5 rounded-xl border border-slate-700">
+              <p className="text-xs lg:text-sm font-bold text-slate-400 mb-1">Total Wages Paid</p>
+              <p className="text-xl lg:text-2xl font-bold text-rose-400 break-words">-{formatCurrency(monthlyTotals.wages)}</p>
             </div>
-            <div className="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
-              <p className="text-sm font-bold text-slate-400 mb-1">Maintenance</p>
-              <p className="text-2xl font-bold text-rose-400">-{formatCurrency(monthlyTotals.maintenance)}</p>
+            <div className="bg-slate-800/50 p-4 lg:p-5 rounded-xl border border-slate-700">
+              <p className="text-xs lg:text-sm font-bold text-slate-400 mb-1">Maintenance</p>
+              <p className="text-xl lg:text-2xl font-bold text-rose-400 break-words">-{formatCurrency(monthlyTotals.maintenance)}</p>
             </div>
-            <div className="bg-teal-900/40 p-5 rounded-xl border border-teal-800">
-              <p className="text-sm font-bold text-teal-200 mb-1">Net Monthly Profit</p>
-              <p className="text-3xl font-black text-teal-400">{formatCurrency(monthlyTotals.profit)}</p>
+            <div className="bg-teal-900/40 p-4 lg:p-5 rounded-xl border border-teal-800 flex flex-col justify-center">
+              <p className="text-xs lg:text-sm font-bold text-teal-200 mb-1">Net Monthly Profit</p>
+              <p className="text-xl lg:text-2xl font-black text-teal-400 truncate">{formatCurrency(monthlyTotals.profit)}</p>
             </div>
           </div>
         </div>
