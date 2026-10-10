@@ -10,6 +10,8 @@ import {
   Package,
   Layers,
   Truck,
+  ClipboardList,
+  Cpu,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -56,17 +58,40 @@ export const Sidebar: React.FC = () => {
           <span>Storekeeper</span>
         </Link>
 
-        <Link
-          href="/production/orders"
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-            isLinkActive('/production')
-              ? 'bg-teal-600 text-white shadow-md'
-              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <Layers className={`h-5 w-5 ${isLinkActive('/production') ? 'text-white' : 'text-sky-400'}`} />
-          <span>Production Supervisor</span>
-        </Link>
+        {/* Production Supervisor Section */}
+        <div className="space-y-1">
+          <div className="px-3 pt-2 pb-1 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-sky-400">
+            <span className="flex items-center gap-2">
+              <Layers className="h-3.5 w-3.5 text-sky-400" />
+              <span>Production Supervisor</span>
+            </span>
+          </div>
+          <div className="space-y-1 pl-1">
+            <Link
+              href="/production/orders"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                pathname === '/production/orders' || pathname.startsWith('/production/orders')
+                  ? 'bg-teal-600 text-white font-semibold shadow-md'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <ClipboardList className={`h-4 w-4 ${pathname.startsWith('/production/orders') ? 'text-white' : 'text-sky-400'}`} />
+              <span>Production Orders</span>
+            </Link>
+
+            <Link
+              href="/production/machines"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                pathname.startsWith('/production/machines') || pathname.startsWith('/production/machine-events')
+                  ? 'bg-teal-600 text-white font-semibold shadow-md'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Cpu className={`h-4 w-4 ${pathname.startsWith('/production/machines') || pathname.startsWith('/production/machine-events') ? 'text-white' : 'text-teal-400'}`} />
+              <span>Machine Floor</span>
+            </Link>
+          </div>
+        </div>
 
         <Link
           href="/quality-inspector"

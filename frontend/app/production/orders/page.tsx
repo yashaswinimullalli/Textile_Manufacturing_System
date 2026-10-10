@@ -123,10 +123,27 @@ export default function ProductionOrdersPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
+      {/* Header & Section Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Production Orders</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Production Orders</h1>
+          </div>
+
+          {/* Section Navigation Tabs */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-xs flex items-center gap-1.5">
+              <ClipboardList className="h-3.5 w-3.5 text-teal-600" />
+              <span>Production Orders</span>
+            </span>
+            <Link
+              href="/production/machines"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition-colors flex items-center gap-1.5"
+            >
+              <Cpu className="h-3.5 w-3.5 text-slate-500" />
+              <span>Machine Floor</span>
+            </Link>
+          </div>
         </div>
 
         <div className="flex items-center gap-2.5">
