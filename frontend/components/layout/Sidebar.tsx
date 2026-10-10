@@ -31,7 +31,7 @@ export const Sidebar: React.FC = () => {
         </Link>
       </div>
 
-      {/* Main Navigation - Exactly 5 Options, Non-Scrollable */}
+      {/* Main Navigation - Non-Scrollable */}
       <div className="flex-1 py-6 px-3 space-y-2 overflow-hidden">
         <div className="px-3 mb-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">
           Core Modules
@@ -41,66 +41,88 @@ export const Sidebar: React.FC = () => {
         <Link
           href="/storekeeper/inventory"
           className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-            isLinkActive('/storekeeper')
+            pathname === '/storekeeper' || pathname.startsWith('/storekeeper/inventory')
               ? 'bg-teal-600 text-white shadow-md'
               : 'text-slate-300 hover:bg-slate-800 hover:text-white'
           }`}
         >
-          <Package className={`h-5 w-5 ${isLinkActive('/storekeeper') ? 'text-white' : 'text-teal-400'}`} />
+          <Package className={`h-5 w-5 ${pathname === '/storekeeper' || pathname.startsWith('/storekeeper/inventory') ? 'text-white' : 'text-teal-400'}`} />
           <span>Inventory Manager</span>
         </Link>
 
-        {/* 2. Production Supervisor */}
+        {/* 2. Quality Inspector - Raw Material (Yarn) */}
+        <Link
+          href="/storekeeper/quality-check"
+          className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+            pathname === '/storekeeper/quality-check' || pathname.startsWith('/quality/inspections')
+              ? 'bg-teal-600 text-white shadow-md'
+              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+          }`}
+        >
+          <ShieldCheck className={`h-5 w-5 shrink-0 ${pathname === '/storekeeper/quality-check' || pathname.startsWith('/quality/inspections') ? 'text-white' : 'text-emerald-400'}`} />
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-semibold leading-tight">Quality Inspector</span>
+            <span className={`text-[11px] leading-tight ${
+              pathname === '/storekeeper/quality-check' || pathname.startsWith('/quality/inspections')
+                ? 'text-teal-100'
+                : 'text-slate-400'
+            }`}>
+              Raw Material (Yarn)
+            </span>
+          </div>
+        </Link>
+
+        {/* 3. Production Supervisor */}
         <Link
           href="/production/orders"
           className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-            isLinkActive('/production')
+            pathname.startsWith('/production')
               ? 'bg-teal-600 text-white shadow-md'
               : 'text-slate-300 hover:bg-slate-800 hover:text-white'
           }`}
         >
-          <Factory className={`h-5 w-5 ${isLinkActive('/production') ? 'text-white' : 'text-sky-400'}`} />
+          <Factory className={`h-5 w-5 ${pathname.startsWith('/production') ? 'text-white' : 'text-sky-400'}`} />
           <span>Production Supervisor</span>
         </Link>
 
-        {/* 3. Quality Inspector */}
+        {/* 4. Quality Inspector (Floor) */}
         <Link
           href="/quality-inspector"
           className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-            isLinkActive('/quality-inspector') || isLinkActive('/quality')
+            pathname === '/quality-inspector'
               ? 'bg-teal-600 text-white shadow-md'
               : 'text-slate-300 hover:bg-slate-800 hover:text-white'
           }`}
         >
-          <ShieldCheck className={`h-5 w-5 ${isLinkActive('/quality-inspector') || isLinkActive('/quality') ? 'text-white' : 'text-emerald-400'}`} />
+          <ShieldCheck className={`h-5 w-5 ${pathname === '/quality-inspector' ? 'text-white' : 'text-emerald-400'}`} />
           <span>Quality Inspector</span>
         </Link>
 
-        {/* 4. Owner / Accounts (Visible to Owner, hidden from Employees) */}
+        {/* 5. Owner / Accounts (Visible to Owner, hidden from Employees) */}
         {user?.category !== 'employee' && (
           <Link
             href="/owner"
             className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-              isLinkActive('/owner')
+              pathname.startsWith('/owner')
                 ? 'bg-teal-600 text-white shadow-md'
                 : 'text-slate-300 hover:bg-slate-800 hover:text-white'
             }`}
           >
-            <Building2 className={`h-5 w-5 ${isLinkActive('/owner') ? 'text-white' : 'text-amber-400'}`} />
+            <Building2 className={`h-5 w-5 ${pathname.startsWith('/owner') ? 'text-white' : 'text-amber-400'}`} />
             <span>Owner / Accounts</span>
           </Link>
         )}
 
-        {/* 5. Dispatch Hub */}
+        {/* 6. Dispatch Hub */}
         <Link
           href="/dispatch"
           className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-            isLinkActive('/dispatch')
+            pathname.startsWith('/dispatch')
               ? 'bg-teal-600 text-white shadow-md'
               : 'text-slate-300 hover:bg-slate-800 hover:text-white'
           }`}
         >
-          <Truck className={`h-5 w-5 ${isLinkActive('/dispatch') ? 'text-white' : 'text-indigo-400'}`} />
+          <Truck className={`h-5 w-5 ${pathname.startsWith('/dispatch') ? 'text-white' : 'text-indigo-400'}`} />
           <span>Dispatch Hub</span>
         </Link>
       </div>
