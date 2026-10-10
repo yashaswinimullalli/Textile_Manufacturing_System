@@ -49,13 +49,44 @@ export const Sidebar: React.FC = () => {
         <Link
           href="/storekeeper/inventory"
           className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-            isLinkActive('/storekeeper')
+            pathname === '/storekeeper' || pathname.startsWith('/storekeeper/inventory')
               ? 'bg-teal-600 text-white shadow-md'
               : 'text-slate-300 hover:bg-slate-800 hover:text-white'
           }`}
         >
-          <Package className={`h-5 w-5 ${isLinkActive('/storekeeper') ? 'text-white' : 'text-teal-400'}`} />
+          <Package className={`h-5 w-5 ${pathname === '/storekeeper' || pathname.startsWith('/storekeeper/inventory') ? 'text-white' : 'text-teal-400'}`} />
           <span>Storekeeper</span>
+        </Link>
+
+        {/* Quality Inspector of Raw Material */}
+        <Link
+          href="/storekeeper/quality-check"
+          className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+            pathname === '/storekeeper/quality-check' || pathname.startsWith('/quality/inspections')
+              ? 'bg-teal-600 text-white shadow-md'
+              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+          }`}
+        >
+          <ShieldCheck className={`h-5 w-5 shrink-0 ${pathname === '/storekeeper/quality-check' || pathname.startsWith('/quality/inspections') ? 'text-white' : 'text-emerald-400'}`} />
+          <div className="flex items-center justify-between flex-1 min-w-0">
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold leading-tight">Quality Inspector</span>
+              <span className={`text-[11px] leading-tight ${
+                pathname === '/storekeeper/quality-check' || pathname.startsWith('/quality/inspections')
+                  ? 'text-teal-100'
+                  : 'text-slate-400'
+              }`}>
+                Raw Material (Yarn)
+              </span>
+            </div>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold shrink-0 ml-1.5 ${
+              pathname === '/storekeeper/quality-check' || pathname.startsWith('/quality/inspections')
+                ? 'bg-teal-900 text-teal-200 border border-teal-700'
+                : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+            }`}>
+              QC
+            </span>
+          </div>
         </Link>
 
         {/* Production Supervisor Section */}
