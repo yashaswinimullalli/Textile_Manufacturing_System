@@ -1,221 +1,282 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import {
   Boxes,
-  Layers,
+  Factory,
+  ShieldCheck,
+  Building2,
   ArrowRight,
-  ShieldAlert,
-  Clock,
-  PlusCircle,
-  Activity,
-  ClipboardList,
-  CheckCircle2,
-  AlertTriangle,
+  Layers,
+  Sparkles
 } from 'lucide-react';
-import { api } from '@/lib/api';
-import { SupervisorDashboardMetrics } from '@/lib/types';
-import { StatCard } from '@/components/ui/StatCard';
-import { AlertBanner } from '@/components/ui/AlertBanner';
 
-export default function HomePage() {
-  const [metrics, setMetrics] = useState<SupervisorDashboardMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
+// Four Role Cards configuration
+const ROLES = [
+  {
+    id: 'storekeeper',
+    title: 'Storekeeper',
+    description: 'Manage yarn inventory, material receipts, and stock availability.',
+    icon: Boxes,
+    href: '/storekeeper/inventory',
+    badge: 'Inventory & Stock',
+    accentColor: 'teal',
+    bgGlow: 'from-teal-500/10 to-teal-500/0',
+    iconBg: 'bg-teal-50 text-teal-700 border-teal-200/80 group-hover:bg-teal-600 group-hover:text-white',
+    badgeStyle: 'bg-teal-50 text-teal-800 border-teal-200',
+    hoverBorder: 'hover:border-teal-400/80',
+  },
+  {
+    id: 'production-supervisor',
+    title: 'Production Supervisor',
+    description: 'Monitor production orders, machine assignments, and production progress.',
+    icon: Factory,
+    href: '/production/orders',
+    badge: 'Manufacturing & Looms',
+    accentColor: 'blue',
+    bgGlow: 'from-sky-500/10 to-sky-500/0',
+    iconBg: 'bg-sky-50 text-sky-700 border-sky-200/80 group-hover:bg-sky-600 group-hover:text-white',
+    badgeStyle: 'bg-sky-50 text-sky-800 border-sky-200',
+    hoverBorder: 'hover:border-sky-400/80',
+  },
+  {
+    id: 'quality-inspector',
+    title: 'Quality Inspector',
+    description: 'Scan fabric roll barcodes, record defects, and manage quality inspections.',
+    icon: ShieldCheck,
+    href: '/quality-inspector',
+    badge: 'Defects & Inspection',
+    accentColor: 'emerald',
+    bgGlow: 'from-emerald-500/10 to-emerald-500/0',
+    iconBg: 'bg-emerald-50 text-emerald-700 border-emerald-200/80 group-hover:bg-emerald-600 group-hover:text-white',
+    badgeStyle: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    hoverBorder: 'hover:border-emerald-400/80',
+  },
+  {
+    id: 'owner',
+    title: 'Owner',
+    description: 'Review important issues, monitor operations, and track actions that need attention.',
+    icon: Building2,
+    href: '/owner',
+    badge: 'Executive & Accounts',
+    accentColor: 'slate',
+    bgGlow: 'from-slate-700/10 to-slate-700/0',
+    iconBg: 'bg-slate-100 text-slate-800 border-slate-300 group-hover:bg-slate-900 group-hover:text-white',
+    badgeStyle: 'bg-slate-100 text-slate-800 border-slate-200',
+    hoverBorder: 'hover:border-slate-500',
+  },
+];
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const data = await api.getDashboardMetrics();
-        setMetrics(data);
-      } catch (err) {
-        console.error('Failed to load portal metrics', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  }, []);
-
+export default function WelcomePage() {
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 rounded-xl p-6 text-white shadow-md border border-slate-800">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
-              Factory Operations Command
-            </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">FabricTrace Operations Portal</h1>
-            <p className="mt-1 text-sm text-slate-300 max-w-2xl">
-              Unified yarn inventory, production progress tracking, machine event logging, and downtime audit for textile manufacturing.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-2"
-            >
-              <span>Supervisor Dashboard</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/storekeeper/receive-yarn"
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
-            >
-              <PlusCircle className="h-4 w-4 text-teal-400" />
-              <span>Receive Yarn</span>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Critical Inactivity Warning if detected (Point 5) */}
-      {metrics?.possible_stoppages && metrics.possible_stoppages.length > 0 && (
-        <AlertBanner
-          type="warning"
-          title="Possible Stoppage — Confirmation Required"
-          message={`Machine ${metrics.possible_stoppages[0].machine_code} has had no recorded output for ${metrics.possible_stoppages[0].minutes_inactive} minutes. Note: This indicates an unverified dormancy interval, NOT a confirmed breakdown. Physical confirmation required.`}
-          actionText="Inspect & Verify Machine"
-          onAction={() => {
-            window.location.href = '/production/machines';
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#FAF8F5] text-slate-900 font-sans selection:bg-teal-100 selection:text-teal-900">
+      
+      {/* ─── 4 BEAUTIFUL GRAPHICAL BACKGROUND ANIMATIONS (Simple & Professional) ─── */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+        
+        {/* 1. Subtle Woven Fabric Grid (Loom Warp & Weft Pattern) */}
+        <div 
+          className="absolute inset-0 opacity-[0.035]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #0F172A 1px, transparent 1px),
+              linear-gradient(to bottom, #0F172A 1px, transparent 1px)
+            `,
+            backgroundSize: '36px 36px'
           }}
         />
-      )}
 
-      {/* Top Level Operational Indicators */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Active Orders"
-          value={loading ? '...' : metrics?.active_orders_count || 0}
-          subtitle="Orders currently in production"
-          icon={<ClipboardList className="h-5 w-5" />}
-          variant="teal"
+        {/* 2. Floating Ambient Glow Orb 1 - Muted Teal (Top Left) */}
+        <motion.div
+          animate={{
+            x: [0, 25, 0],
+            y: [0, -20, 0],
+            scale: [1, 1.08, 1],
+          }}
+          transition={{
+            duration: 16,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-teal-300/20 blur-3xl"
         />
-        <StatCard
-          title="Running Machines"
-          value={loading ? '...' : `${metrics?.running_machines_count || 0} / 5`}
-          subtitle={`${metrics?.stopped_machines_count || 0} machines currently stopped`}
-          icon={<Activity className="h-5 w-5" />}
-          variant={metrics && metrics.stopped_machines_count > 0 ? 'warning' : 'teal'}
+
+        {/* 3. Floating Ambient Glow Orb 2 - Soft Blue/Indigo (Top Right) */}
+        <motion.div
+          animate={{
+            x: [0, -30, 0],
+            y: [0, 25, 0],
+            scale: [1, 1.12, 1],
+          }}
+          transition={{
+            duration: 18,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
+          }}
+          className="absolute -top-20 -right-28 w-[28rem] h-[28rem] rounded-full bg-sky-200/25 blur-3xl"
         />
-        <StatCard
-          title="Recorded Downtime"
-          value={loading ? '...' : `${metrics?.total_downtime_minutes || 0} min`}
-          subtitle="Total shift stoppage duration"
-          icon={<Clock className="h-5 w-5" />}
-          variant="default"
+
+        {/* 4. Floating Ambient Glow Orb 3 - Warm Linen/Amber (Bottom Center) */}
+        <motion.div
+          animate={{
+            x: [0, 20, 0],
+            y: [0, -15, 0],
+            scale: [1, 1.05, 1],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 2
+          }}
+          className="absolute -bottom-40 left-1/2 -translate-x-1/2 w-[36rem] h-[36rem] rounded-full bg-amber-100/30 blur-3xl"
         />
-        <StatCard
-          title="Low-Stock Batches"
-          value={loading ? '...' : metrics?.low_stock_batch_count || 0}
-          subtitle="Yarn batches below reorder threshold"
-          icon={<Boxes className="h-5 w-5" />}
-          variant={metrics && metrics.low_stock_batch_count > 0 ? 'danger' : 'default'}
-        />
+
+        {/* Animated Horizontal Weave Accent Lines */}
+        <svg className="absolute inset-0 w-full h-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg">
+          <motion.line
+            x1="0" y1="25%" x2="100%" y2="25%"
+            stroke="#0F172A" strokeWidth="1.5" strokeDasharray="8 12"
+            animate={{ strokeDashoffset: [0, 100] }}
+            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+          />
+          <motion.line
+            x1="0" y1="75%" x2="100%" y2="75%"
+            stroke="#0F172A" strokeWidth="1.5" strokeDasharray="8 12"
+            animate={{ strokeDashoffset: [100, 0] }}
+            transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
+          />
+        </svg>
+
       </div>
 
-      {/* Role Navigation Split Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-        {/* Module A: Storekeeper Card */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between hover:border-teal-400 transition-colors">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-teal-50 text-teal-700 rounded-lg">
-                <Boxes className="h-6 w-6" />
-              </div>
-              <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full">
-                Module A
+      {/* ─── MAIN CONTENT CONTAINER ─── */}
+      <div className="relative z-10 min-h-screen flex flex-col justify-between p-6 sm:p-10 lg:p-14 max-w-7xl mx-auto">
+        
+        {/* TOP BRAND BAR */}
+        <motion.header
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full flex items-center justify-between pb-6"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-sm">
+              <Layers className="w-5 h-5 text-teal-400" />
+            </div>
+            <div>
+              <span className="font-extrabold text-lg tracking-tight text-slate-900 block leading-tight">
+                VASTRA
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block">
+                Textile Management
               </span>
             </div>
-            <h2 className="text-xl font-bold text-slate-900">Storekeeper — Yarn Inventory</h2>
-            <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-              Record incoming raw yarn batches, track available stock in kg, audit transactions with immutable stock movement logs, and verify yarn sufficiency for production orders.
-            </p>
-
-            <div className="mt-4 space-y-2 text-xs text-slate-600">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-teal-600" />
-                <span>Receive Yarn Batch with safe ledger transactions</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-teal-600" />
-                <span>Configurable low-stock reorder thresholds</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-teal-600" />
-                <span>Material availability checker for planned orders</span>
-              </div>
-            </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-            <Link
-              href="/storekeeper/inventory"
-              className="text-sm font-semibold text-teal-700 hover:text-teal-900 flex items-center gap-1.5"
-            >
-              <span>Open Yarn Inventory</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/storekeeper/receive-yarn"
-              className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-md text-xs font-medium shadow-sm transition-colors"
-            >
-              + Receive Batch
-            </Link>
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 border border-slate-200/80 shadow-xs text-xs font-semibold text-slate-600">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Factory Portal Active</span>
           </div>
-        </div>
+        </motion.header>
 
-        {/* Module B: Production Supervisor Card */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between hover:border-sky-400 transition-colors">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-sky-50 text-sky-700 rounded-lg">
-                <Layers className="h-6 w-6" />
-              </div>
-              <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full">
-                Module B
-              </span>
-            </div>
-            <h2 className="text-xl font-bold text-slate-900">Production Supervisor — Orders & Machines</h2>
-            <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-              Manage fabric work orders, assign weaving looms and shifts, log production output increments, record timestamped machine events, and run the demo stoppage simulator.
-            </p>
+        {/* WELCOME HEADING & SUBTITLE */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="text-center my-auto py-8 sm:py-12 space-y-4"
+        >
+          {/* Prominent Required Heading */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight max-w-4xl mx-auto">
+            Welcome to Vastra Textile Management System
+          </h1>
 
-            <div className="mt-4 space-y-2 text-xs text-slate-600">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-sky-600" />
-                <span>Target vs. produced quantity tracking with deadline flags</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-sky-600" />
-                <span>Machine event timeline & demo stoppage simulator</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-sky-600" />
-                <span>Inactivity stoppage warning (&gt;60m missing output)</span>
-              </div>
-            </div>
+          {/* Welcoming Subtitle */}
+          <p className="text-base sm:text-lg md:text-xl text-slate-600 font-medium max-w-xl mx-auto">
+            Choose your role to continue.
+          </p>
+
+          {/* FOUR USER ROLE CARDS GRID */}
+          <div className="pt-8 sm:pt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full text-left">
+            {ROLES.map((role, index) => {
+              const Icon = role.icon;
+
+              return (
+                <motion.div
+                  key={role.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    duration: 0.5, 
+                    delay: 0.2 + (index * 0.08),
+                    ease: [0.21, 0.47, 0.32, 0.98] 
+                  }}
+                  whileHover={{ y: -6 }}
+                  whileTap={{ scale: 0.99 }}
+                  className="h-full"
+                >
+                  <Link
+                    href={role.href}
+                    className={`group relative h-full flex flex-col justify-between bg-white/95 backdrop-blur-xs border border-slate-200/90 ${role.hoverBorder} rounded-3xl p-7 sm:p-8 shadow-[0_4px_20px_rgba(15,23,42,0.03)] hover:shadow-[0_20px_35px_rgba(15,23,42,0.08)] transition-all duration-300 cursor-pointer overflow-hidden focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-500/30`}
+                  >
+                    {/* Top ambient card glow on hover */}
+                    <div 
+                      className={`absolute top-0 right-0 w-36 h-36 bg-gradient-to-br ${role.bgGlow} rounded-bl-full pointer-events-none transition-opacity duration-300 opacity-60 group-hover:opacity-100`} 
+                    />
+
+                    <div>
+                      {/* Icon and Role Tag */}
+                      <div className="flex items-center justify-between gap-3 mb-6">
+                        <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center transition-all duration-300 shadow-xs ${role.iconBg}`}>
+                          <Icon className="w-7 h-7 transition-transform duration-300 group-hover:scale-110" />
+                        </div>
+
+                        <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border shadow-2xs ${role.badgeStyle}`}>
+                          {role.badge}
+                        </span>
+                      </div>
+
+                      {/* Role Title */}
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight group-hover:text-teal-700 transition-colors duration-200">
+                        {role.title}
+                      </h2>
+
+                      {/* Description */}
+                      <p className="mt-2.5 text-sm font-medium text-slate-600 leading-relaxed">
+                        {role.description}
+                      </p>
+                    </div>
+
+                    {/* Interactive Action Prompt */}
+                    <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-500 group-hover:text-slate-900 transition-colors">
+                      <span className="font-semibold tracking-wide">Enter Workspace</span>
+                      <div className="w-8 h-8 rounded-xl bg-slate-50 group-hover:bg-slate-900 group-hover:text-white flex items-center justify-center transition-all duration-300 shadow-2xs">
+                        <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              );
+            })}
           </div>
+        </motion.div>
 
-          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-            <Link
-              href="/production/orders"
-              className="text-sm font-semibold text-sky-700 hover:text-sky-900 flex items-center gap-1.5"
-            >
-              <span>View Production Orders</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/production/machine-events"
-              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-medium shadow-sm transition-colors flex items-center gap-1.5"
-            >
-              <Activity className="h-3.5 w-3.5 text-teal-400" />
-              <span>Demo Simulator</span>
-            </Link>
-          </div>
-        </div>
+        {/* BOTTOM BALANCED FOOTER */}
+        <motion.footer
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.6 }}
+          className="w-full pt-6 text-center text-xs font-bold text-slate-400 tracking-wider uppercase border-t border-slate-200/60"
+        >
+          <span>VASTRA TEXTILE ENTERPRISE ERP • OPERATIONS TERMINAL</span>
+        </motion.footer>
+
       </div>
+
     </div>
   );
 }

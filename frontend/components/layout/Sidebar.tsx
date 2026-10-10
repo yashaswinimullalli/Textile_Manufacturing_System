@@ -54,22 +54,20 @@ export const Sidebar: React.FC = () => {
           <nav className="space-y-1">
             <Link
               href="/storekeeper/inventory"
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                pathname === '/storekeeper/inventory'
+              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${pathname === '/storekeeper/inventory'
                   ? 'bg-teal-600 text-white shadow-sm'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+                }`}
             >
               <Boxes className="h-4 w-4" />
               <span>Yarn Stock & Barcodes</span>
             </Link>
             <Link
               href="/storekeeper/quality-check"
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                pathname === '/storekeeper/quality-check' || pathname === '/quality/inspections'
+              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${pathname === '/storekeeper/quality-check' || pathname === '/quality/inspections'
                   ? 'bg-teal-600 text-white shadow-sm'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+                }`}
             >
               <ShieldCheck className="h-4 w-4 text-emerald-400" />
               <span className="flex items-center justify-between flex-1">
@@ -79,11 +77,10 @@ export const Sidebar: React.FC = () => {
             </Link>
             <Link
               href="/storekeeper/receive-yarn"
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                pathname === '/storekeeper/receive-yarn'
+              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${pathname === '/storekeeper/receive-yarn'
                   ? 'bg-teal-600 text-white shadow-sm'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+                }`}
             >
               <PlusCircle className="h-4 w-4" />
               <span>Receive Raw Yarn</span>
@@ -100,22 +97,20 @@ export const Sidebar: React.FC = () => {
           <nav className="space-y-1">
             <Link
               href="/production/orders"
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isLinkActive('/production/orders')
+              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isLinkActive('/production/orders')
                   ? 'bg-teal-600 text-white shadow-sm'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+                }`}
             >
               <ClipboardList className="h-4 w-4" />
               <span>Production Orders</span>
             </Link>
             <Link
               href="/production/machines"
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isLinkActive('/production/machines')
+              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isLinkActive('/production/machines')
                   ? 'bg-teal-600 text-white shadow-sm'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+                }`}
             >
               <Cpu className="h-4 w-4" />
               <span>Machines & Output</span>
