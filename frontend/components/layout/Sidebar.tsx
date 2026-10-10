@@ -9,6 +9,7 @@ import {
   Building2,
   Package,
   Layers,
+  Truck,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -89,6 +90,18 @@ export const Sidebar: React.FC = () => {
         >
           <Building2 className={`h-5 w-5 ${isLinkActive('/owner') ? 'text-white' : 'text-amber-400'}`} />
           <span>Owner / Accounts</span>
+        </Link>
+
+        <Link
+          href="/dispatch"
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+            isLinkActive('/dispatch')
+              ? 'bg-teal-600 text-white shadow-md'
+              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+          }`}
+        >
+          <Truck className={`h-5 w-5 ${isLinkActive('/dispatch') ? 'text-white' : 'text-indigo-400'}`} />
+          <span>Dispatch Hub</span>
         </Link>
       </div>
 
