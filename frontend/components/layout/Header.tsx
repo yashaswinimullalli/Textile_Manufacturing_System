@@ -9,15 +9,17 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  title = 'FabricTrace Textile System',
-  subtitle = 'Operational Management & Traceability',
+  title,
+  subtitle,
 }) => {
   return (
-    <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-20">
-      <div>
-        <h1 className="text-lg font-bold text-slate-900 tracking-tight">{title}</h1>
-        <p className="text-xs text-slate-500">{subtitle}</p>
-      </div>
+    <header className="h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-end sticky top-0 z-20">
+      {title && (
+        <div className="mr-auto">
+          <h1 className="text-lg font-bold text-slate-900 tracking-tight">{title}</h1>
+          {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
+        </div>
+      )}
 
       <div className="flex items-center gap-4">
         {/* Status pill: Shift Info */}
