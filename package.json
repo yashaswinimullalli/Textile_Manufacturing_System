@@ -7,7 +7,11 @@
     "backend": "npm --prefix backend start",
     "backend:dev": "npm --prefix backend run dev",
     "frontend": "npm --prefix frontend run dev",
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend\"",
     "test:backend": "npm --prefix backend test",
     "build:frontend": "npm --prefix frontend run build"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
   }
 }
