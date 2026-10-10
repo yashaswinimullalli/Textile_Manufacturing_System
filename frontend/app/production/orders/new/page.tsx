@@ -33,6 +33,7 @@ export default function NewOrderPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const validate = () => {
+    debugger;
     const errs: Record<string, string> = {};
     if (!formData.order_no.trim()) {
       errs.order_no = 'Order number is required.';
@@ -67,6 +68,7 @@ export default function NewOrderPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    debugger;
     e.preventDefault();
     if (!validate()) return;
 

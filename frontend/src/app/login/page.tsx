@@ -43,6 +43,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
+    debugger;
     e.preventDefault();
     if (!selectedRole) {
       setError('Please select a role to continue.');
