@@ -265,12 +265,6 @@ export default function DispatchScanner() {
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition mb-2"
-            >
-              <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-            </Link>
             <h2 className="text-3xl font-serif text-slate-900 tracking-tight">
               Loading Dock
             </h2>
