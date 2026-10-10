@@ -223,7 +223,7 @@ export default function WelcomePage() {
                   className="h-full"
                 >
                   <Link
-                    href={role.href}
+                    href={`/login?role=${role.id}`}
                     className={`group relative h-full flex flex-col justify-between bg-white/95 backdrop-blur-xs border border-slate-200/90 ${role.hoverBorder} rounded-3xl p-7 sm:p-8 shadow-[0_4px_20px_rgba(15,23,42,0.03)] hover:shadow-[0_20px_35px_rgba(15,23,42,0.08)] transition-all duration-300 cursor-pointer overflow-hidden focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-500/30`}
                   >
                     {/* Top ambient card glow on hover */}
