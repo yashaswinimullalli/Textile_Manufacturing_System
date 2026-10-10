@@ -55,23 +55,14 @@ export const Sidebar: React.FC = () => {
         {/* Quality Inspector of Raw Material */}
         <Link
           href="/storekeeper/quality-check"
-          className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
             pathname === '/storekeeper/quality-check' || pathname.startsWith('/quality/inspections')
               ? 'bg-teal-600 text-white shadow-md'
               : 'text-slate-300 hover:bg-slate-800 hover:text-white'
           }`}
         >
           <ShieldCheck className={`h-5 w-5 shrink-0 ${pathname === '/storekeeper/quality-check' || pathname.startsWith('/quality/inspections') ? 'text-white' : 'text-emerald-400'}`} />
-          <div className="flex flex-col min-w-0">
-            <span className="text-xs font-semibold leading-tight">Quality Inspector</span>
-            <span className={`text-[11px] leading-tight ${
-              pathname === '/storekeeper/quality-check' || pathname.startsWith('/quality/inspections')
-                ? 'text-teal-100'
-                : 'text-slate-400'
-            }`}>
-              Raw Material (Yarn)
-            </span>
-          </div>
+          <span>Quality Inspector</span>
         </Link>
 
         {/* Production Supervisor Section */}
