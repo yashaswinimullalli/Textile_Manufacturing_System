@@ -21,15 +21,8 @@ export default function QualityInspectorLayout({ children }: { children: React.R
       {/* ─── Header ──────────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link href="/" className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition flex items-center gap-1.5 text-sm font-medium cursor-pointer">
-            <ArrowLeft className="w-4 h-4" />
-            Home
-          </Link>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
-                Quality Inspector
-              </span>
               <span className="text-xs text-slate-400">Morning A · Station 1</span>
             </div>
             <h1 className="text-lg font-serif text-slate-900 mt-0.5">Inspection Desk</h1>
