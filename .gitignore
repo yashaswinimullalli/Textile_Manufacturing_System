@@ -1,10 +1,13 @@
 # Dependencies
 node_modules/
+backend/node_modules/
+frontend/node_modules/
 **/node_modules/
 
 # Next.js build output
 .next/
-**/.next/
+frontend/.next/
+frontend/out/
 out/
 build/
 dist/
@@ -16,6 +19,7 @@ dist/
 
 # Environment files
 .env
+.env.local
 .env*.local
 **/.env
 **/.env*.local
