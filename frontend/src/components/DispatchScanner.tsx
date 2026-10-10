@@ -11,8 +11,13 @@ import {
   Layers, 
   CheckCircle2, 
   XCircle,
-  Send
+  Send,
+  Camera,
+  Image as ImageIcon,
+  Keyboard,
+  Upload
 } from "lucide-react";
+import { Html5Qrcode } from "html5-qrcode";
 import { useFabricTrace } from "@/context/FabricTraceContext";
 
 // Play audio chime on pass
@@ -52,6 +57,12 @@ interface LoadedPackage {
 export default function DispatchScanner() {
   const { fabricRolls } = useFabricTrace();
 
+  const [activeTab, setActiveTab] = useState<'manual' | 'camera' | 'upload'>('manual');
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const html5QrCodeRef = React.useRef<Html5Qrcode | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
   const [scannedInput, setScannedInput] = useState("");
   const [scanState, setScanState] = useState<"idle" | "pass" | "reject">("idle");
   const [loadedPackages, setLoadedPackages] = useState<LoadedPackage[]>([
@@ -61,6 +72,72 @@ export default function DispatchScanner() {
   const [currentPassRoll, setCurrentPassRoll] = useState<string | null>(null);
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchSuccess, setDispatchSuccess] = useState(false);
+
+  // Handle Camera scanning
+  React.useEffect(() => {
+    if (activeTab === 'camera') {
+      startCameraScanning();
+    } else {
+      stopCameraScanning();
+    }
+    return () => {
+      stopCameraScanning();
+    };
+  }, [activeTab]);
+
+  const startCameraScanning = async () => {
+    setCameraError(null);
+    try {
+      const html5QrCode = new Html5Qrcode('dispatch-camera-reader');
+      html5QrCodeRef.current = html5QrCode;
+
+      const cameras = await Html5Qrcode.getCameras();
+      if (!cameras || cameras.length === 0) {
+        setCameraError('No camera found on this device.');
+        return;
+      }
+
+      await html5QrCode.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          stopCameraScanning();
+          setActiveTab('manual');
+          setScannedInput(decodedText);
+          handleScan(decodedText);
+        },
+        () => {}
+      );
+      setCameraActive(true);
+    } catch (err: any) {
+      setCameraError(err.message || 'Camera access blocked.');
+      setCameraActive(false);
+    }
+  };
+
+  const stopCameraScanning = () => {
+    if (html5QrCodeRef.current && cameraActive) {
+      html5QrCodeRef.current.stop().then(() => {
+        html5QrCodeRef.current?.clear();
+        setCameraActive(false);
+      }).catch(() => {});
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      try {
+        const html5QrCode = new Html5Qrcode('dispatch-camera-reader');
+        const decodedText = await html5QrCode.scanFile(file, true);
+        setActiveTab('manual');
+        setScannedInput(decodedText);
+        handleScan(decodedText);
+      } catch (err) {
+        alert("Could not read barcode from image. Please try another.");
+      }
+    }
+  };
 
   // Scan roll handler
   const handleScan = async (codeToScan?: string) => {
@@ -230,22 +307,92 @@ export default function DispatchScanner() {
           <div className="lg:col-span-5 space-y-6">
             <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col h-full">
               <h3 className="text-lg font-serif text-slate-800 mb-6">Scan Roll Barcode</h3>
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="e.g. 1001 or #1001"
-                  value={scannedInput}
-                  onChange={(e) => setScannedInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleScan()}
-                  className="w-full text-xl font-mono p-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition"
-                  autoFocus
-                />
+              
+              {/* Scan Tabs */}
+              <div className="flex rounded-lg bg-slate-100 p-1 mb-6">
                 <button
-                  onClick={() => handleScan()}
-                  className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-base font-medium shadow-sm transition active:scale-[0.98]"
+                  onClick={() => setActiveTab('manual')}
+                  className={`flex-1 py-2 rounded-md flex items-center justify-center gap-2 text-sm transition-colors ${
+                    activeTab === 'manual' ? 'bg-white text-indigo-700 shadow-sm font-medium' : 'text-slate-500 hover:text-slate-700'
+                  }`}
                 >
-                  Scan Package
+                  <Keyboard className="w-4 h-4" /> Manual
                 </button>
+                <button
+                  onClick={() => setActiveTab('camera')}
+                  className={`flex-1 py-2 rounded-md flex items-center justify-center gap-2 text-sm transition-colors ${
+                    activeTab === 'camera' ? 'bg-white text-indigo-700 shadow-sm font-medium' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <Camera className="w-4 h-4" /> Camera
+                </button>
+                <button
+                  onClick={() => setActiveTab('upload')}
+                  className={`flex-1 py-2 rounded-md flex items-center justify-center gap-2 text-sm transition-colors ${
+                    activeTab === 'upload' ? 'bg-white text-indigo-700 shadow-sm font-medium' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <ImageIcon className="w-4 h-4" /> Image
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="min-h-[160px]">
+                {activeTab === 'manual' && (
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      placeholder="e.g. 1001 or #1001"
+                      value={scannedInput}
+                      onChange={(e) => setScannedInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleScan()}
+                      className="w-full text-xl font-mono p-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => handleScan()}
+                      className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-base font-medium shadow-sm transition active:scale-[0.98]"
+                    >
+                      Process Package
+                    </button>
+                  </div>
+                )}
+
+                {activeTab === 'camera' && (
+                  <div className="space-y-3">
+                    {cameraError ? (
+                      <div className="p-4 bg-rose-50 text-rose-700 rounded-xl text-sm border border-rose-200">
+                        {cameraError}
+                      </div>
+                    ) : (
+                      <div 
+                        id="dispatch-camera-reader" 
+                        className="w-full overflow-hidden rounded-xl border border-slate-200 bg-black min-h-[220px]"
+                      ></div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'upload' && (
+                  <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                    <Upload className="w-8 h-8 text-slate-400 mb-3" />
+                    <p className="text-sm text-slate-600 mb-4 text-center">Upload an image of the barcode label</p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-indigo-600 hover:bg-slate-50 shadow-sm transition"
+                    >
+                      Select Image
+                    </button>
+                    <div id="dispatch-camera-reader" className="hidden"></div>
+                  </div>
+                )}
               </div>
 
               {/* Quick-Test Buttons */}
