@@ -108,7 +108,8 @@ export default function OwnerDashboard() {
   const [activeDeptIndex, setActiveDeptIndex] = useState(0);
 
   // Calendar logic
-  const daysInMonth = new Date(currentYear, currentMonthIdx + 1, 0).getDate();
+  const totalDaysInMonth = new Date(currentYear, currentMonthIdx + 1, 0).getDate();
+  const daysInMonth = (currentYear === 2026 && currentMonthIdx === 9) ? 10 : totalDaysInMonth;
   const firstDayOfMonth = new Date(currentYear, currentMonthIdx, 1).getDay(); // 0 = Sunday
   
   const monthDays = useMemo(() => {
@@ -231,6 +232,16 @@ export default function OwnerDashboard() {
                 </button>
               );
             })}
+            
+            {/* Disabled future days */}
+            {Array.from({ length: totalDaysInMonth - daysInMonth }).map((_, i) => (
+              <div
+                key={`future-${i}`}
+                className="relative p-2 rounded-xl flex flex-col justify-center items-center border border-slate-100 bg-slate-50 opacity-40 cursor-not-allowed h-20"
+              >
+                <span className="text-sm font-bold text-slate-400">{daysInMonth + i + 1}</span>
+              </div>
+            ))}
           </div>
         </div>
 
