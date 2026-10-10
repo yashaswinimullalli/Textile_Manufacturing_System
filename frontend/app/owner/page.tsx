@@ -154,7 +154,6 @@ export default function OwnerDashboard() {
       {/* ─── Page Header ──────────────────────────────────────────────────────── */}
       <div className="mb-8">
         <h1 className="text-3xl font-serif text-slate-900 tracking-tight">Owner Dashboard</h1>
-        <p className="text-sm text-slate-500 mt-1 font-sans">Financial overview, comprehensive calendar, and workforce management.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -168,7 +167,6 @@ export default function OwnerDashboard() {
               </div>
               <div>
                 <h2 className="text-xl font-serif text-slate-800">Financial Calendar</h2>
-                <p className="text-xs text-slate-500 font-sans">Track daily profits and expenses.</p>
               </div>
             </div>
             
@@ -301,7 +299,6 @@ export default function OwnerDashboard() {
           </div>
           <div>
             <h2 className="text-2xl font-serif text-slate-800">Workforce & Departments</h2>
-            <p className="text-sm text-slate-500 font-sans mt-0.5">Manage all factory employees and print daily wage distributions.</p>
           </div>
         </div>
         <Link 
@@ -322,7 +319,6 @@ export default function OwnerDashboard() {
           <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
             <div>
               <h2 className="text-2xl font-serif text-slate-800">Monthly Summary</h2>
-              <p className="text-sm text-slate-500 font-sans mt-0.5">Total aggregation for {MONTHS[currentMonthIdx]} {currentYear}</p>
             </div>
             <span className="px-4 py-1.5 rounded-full bg-indigo-100 text-indigo-700 font-medium text-xs tracking-wider uppercase">
               Financial Overview

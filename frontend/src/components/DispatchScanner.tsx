@@ -268,7 +268,6 @@ export default function DispatchScanner() {
             <h2 className="text-3xl font-serif text-slate-900 tracking-tight">
               Loading Dock
             </h2>
-            <p className="text-sm text-slate-500 mt-1">Scan approved rolls and dispatch deliveries.</p>
           </div>
 
           <Link
@@ -416,7 +415,6 @@ export default function DispatchScanner() {
             <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-6">
               <div>
                 <h3 className="text-lg font-serif text-slate-800">Dispatch Manifest</h3>
-                <p className="text-sm text-slate-500 mt-1">Today's outgoing shipment</p>
               </div>
               <div className="text-right">
                 <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Total Value</p>
