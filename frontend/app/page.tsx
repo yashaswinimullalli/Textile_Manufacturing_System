@@ -154,16 +154,6 @@ export default function WelcomePage() {
       {/* ─── MAIN CONTENT CONTAINER ─── */}
       <div className="relative z-10 min-h-screen flex flex-col justify-between p-6 sm:p-10 lg:p-14 max-w-7xl mx-auto">
 
-        {/* Floating Login Button */}
-        <div className="absolute top-6 right-6 sm:top-10 sm:right-10 z-50">
-          <Link
-            href="/login"
-            className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-900/20 transition-all hover:scale-105"
-          >
-            Admin Login
-          </Link>
-        </div>
-
         {/* WELCOME HEADING & SUBTITLE */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
