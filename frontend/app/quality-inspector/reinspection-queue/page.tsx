@@ -16,7 +16,7 @@ export default function ReinspectionQueuePage() {
   return (
     <div className="max-w-4xl space-y-6 font-sans">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-slate-800">Reinspection Queue</h2>
+        <h2 className="text-xl font-medium text-slate-800">Reinspection Queue</h2>
         <p className="text-sm text-slate-500 mt-1">Check rolls that have returned from the rework stations.</p>
       </div>
 
@@ -25,7 +25,7 @@ export default function ReinspectionQueuePage() {
           <div key={item.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <span className="font-semibold text-slate-800">{item.id}</span>
+                <span className="font-medium text-slate-800">{item.id}</span>
                 <span className="text-sm text-slate-500">{item.type}</span>
               </div>
               <div className="text-sm">

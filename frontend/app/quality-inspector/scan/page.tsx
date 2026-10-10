@@ -14,14 +14,14 @@ export default function ScanPage() {
           Dashboard
         </Link>
         <span className="text-slate-300">/</span>
-        <span className="font-bold text-slate-800">Scan Barcode</span>
+        <span className="font-medium text-slate-800">Scan Barcode</span>
       </div>
 
       {/* Page Header */}
       <div>
         <div className="flex items-center space-x-2 mb-1">
           <Barcode className="w-5 h-5 text-blue-600" />
-          <h1 className="text-xl font-black text-slate-900">Scan Roll Barcode</h1>
+          <h1 className="text-xl font-medium text-slate-900">Scan Roll Barcode</h1>
         </div>
         <p className="text-sm text-slate-500">
           Point your industrial barcode scanner or camera at the roll label, or use manual entry below.

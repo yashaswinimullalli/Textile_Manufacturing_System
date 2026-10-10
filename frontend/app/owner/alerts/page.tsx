@@ -44,7 +44,7 @@ export default function OwnerAlertsPage() {
       <div>
         <div className="flex items-center space-x-2 mb-1">
           <AlertOctagon className="w-5 h-5 text-rose-600" />
-          <h1 className="text-xl font-black text-slate-900">Alerts & Issues</h1>
+          <h1 className="text-xl font-medium text-slate-900">Alerts & Issues</h1>
         </div>
         <p className="text-sm text-slate-500">
           Quality issues and production problems requiring your decision.
@@ -53,27 +53,27 @@ export default function OwnerAlertsPage() {
 
       {/* Summary Chips */}
       <div className="flex flex-wrap gap-3">
-        <div className="px-4 py-2 bg-rose-50 border border-rose-200 rounded-xl text-xs font-bold text-rose-800">
+        <div className="px-4 py-2 bg-rose-50 border border-rose-200 rounded-xl text-xs font-medium text-rose-800">
           HIGH: {highCount} Open
         </div>
-        <div className="px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-800">
+        <div className="px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs font-medium text-amber-800">
           PENDING: {openCount} Open
         </div>
-        <div className="px-4 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">
+        <div className="px-4 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium text-slate-700">
           {alerts.length} Showing
         </div>
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-wrap items-center gap-3">
-        <div className="flex items-center space-x-2 text-xs font-bold text-slate-500">
+        <div className="flex items-center space-x-2 text-xs font-medium text-slate-500">
           <Filter className="w-3.5 h-3.5" />
           <span>Filters:</span>
         </div>
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
         >
           <option value="">All Statuses</option>
           <option value="OPEN">Open Only</option>
@@ -84,7 +84,7 @@ export default function OwnerAlertsPage() {
         <select
           value={severityFilter}
           onChange={e => setSeverityFilter(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
         >
           <option value="">All Priorities</option>
           <option value="HIGH">High Priority</option>
@@ -96,7 +96,7 @@ export default function OwnerAlertsPage() {
         {(statusFilter !== 'OPEN' || severityFilter) && (
           <button
             onClick={() => { setSeverityFilter(''); setStatusFilter('OPEN'); }}
-            className="text-xs text-blue-600 hover:underline font-bold"
+            className="text-xs text-blue-600 hover:underline font-medium"
           >
             Reset filters
           </button>

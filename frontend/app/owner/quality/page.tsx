@@ -143,29 +143,29 @@ export default function OwnerQualityPage() {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Layers className="w-4 h-4 text-teal-600" />
-          <h2 className="text-sm font-semibold text-slate-700">Stage Quality Overview</h2>
+          <h2 className="text-sm font-medium text-slate-700">Stage Quality Overview</h2>
           <span className="text-xs text-slate-400">— counts from this session</span>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {stageSummary.map((s) => (
             <div key={s.id} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-              <p className="text-xs font-semibold text-slate-500 mb-3">{s.label}</p>
+              <p className="text-xs font-medium text-slate-500 mb-3">{s.label}</p>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="flex items-center gap-1.5 text-emerald-700"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />Passed</span>
-                  <span className="font-semibold text-slate-800">{s.passed}</span>
+                  <span className="font-medium text-slate-800">{s.passed}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="flex items-center gap-1.5 text-amber-700"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />Rework</span>
-                  <span className="font-semibold text-slate-800">{s.rework}</span>
+                  <span className="font-medium text-slate-800">{s.rework}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="flex items-center gap-1.5 text-red-700"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" />Rejected</span>
-                  <span className="font-semibold text-slate-800">{s.rejected}</span>
+                  <span className="font-medium text-slate-800">{s.rejected}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs border-t border-slate-100 pt-1.5 mt-1.5">
                   <span className="flex items-center gap-1.5 text-slate-500"><Clock className="w-3 h-3" />Pending</span>
-                  <span className="font-semibold text-slate-800">{s.pending}</span>
+                  <span className="font-medium text-slate-800">{s.pending}</span>
                 </div>
               </div>
             </div>
@@ -178,7 +178,7 @@ export default function OwnerQualityPage() {
         <div className="flex items-center justify-between gap-4 mb-3 flex-wrap">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <h2 className="text-sm font-semibold text-slate-700">Quality Action Wall</h2>
+            <h2 className="text-sm font-medium text-slate-700">Quality Action Wall</h2>
             <span className="text-xs font-medium text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">{openCount} open</span>
             {inProgressCount > 0 && (
               <span className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">{inProgressCount} in progress</span>
@@ -206,13 +206,13 @@ export default function OwnerQualityPage() {
                   <div className="min-w-0">
                     {/* Row 1: Stage + Roll + Status */}
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-full">{item.stage}</span>
+                      <span className="text-xs font-medium text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-full">{item.stage}</span>
                       <span className="text-xs font-mono text-slate-500">{item.roll}</span>
                       <span className={`inline-flex items-center gap-1 text-[11px] font-medium border px-2 py-0.5 rounded-full ${statusColors[item.status]}`}>
                         {statusIcons[item.status]}
                         {item.status === 'open' ? 'Open' : item.status === 'in_progress' ? 'In Progress' : 'Resolved'}
                       </span>
-                      <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${item.severity === 'high' ? 'bg-red-100 text-red-700' : item.severity === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                      <span className={`text-[10px] font-medium uppercase px-2 py-0.5 rounded-full ${item.severity === 'high' ? 'bg-red-100 text-red-700' : item.severity === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
                         {severityLabel[item.severity]}
                       </span>
                     </div>

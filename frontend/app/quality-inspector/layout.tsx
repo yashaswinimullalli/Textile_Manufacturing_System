@@ -32,7 +32,7 @@ export default function QualityInspectorLayout({ children }: { children: React.R
               </span>
               <span className="text-xs text-slate-400">Morning A · Station 1</span>
             </div>
-            <h1 className="text-lg font-semibold text-slate-900 mt-0.5">Inspection Desk</h1>
+            <h1 className="text-lg font-medium text-slate-900 mt-0.5">Inspection Desk</h1>
           </div>
         </div>
 
@@ -42,7 +42,7 @@ export default function QualityInspectorLayout({ children }: { children: React.R
             <User className="w-4 h-4" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-800 leading-none">Alex Kumar</p>
+            <p className="text-xs font-medium text-slate-800 leading-none">Alex Kumar</p>
             <p className="text-[10px] text-teal-600 mt-0.5">Inspector · Active</p>
           </div>
         </div>

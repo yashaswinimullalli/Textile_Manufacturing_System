@@ -42,7 +42,7 @@ export default function OwnerOrdersPage() {
         <div>
           <div className="flex items-center space-x-2 mb-1">
             <Package className="w-5 h-5 text-amber-600" />
-            <h1 className="text-xl font-black text-slate-900">Order Progress</h1>
+            <h1 className="text-xl font-medium text-slate-900">Order Progress</h1>
           </div>
           <p className="text-sm text-slate-500">
             Customer order fulfillment, inspection progress, and delivery status.
@@ -57,20 +57,20 @@ export default function OwnerOrdersPage() {
       {!isLoading && orders.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Orders</div>
-            <div className="text-2xl font-black text-slate-900 mt-1">{orders.length}</div>
+            <div className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Total Orders</div>
+            <div className="text-2xl font-medium text-slate-900 mt-1">{orders.length}</div>
           </div>
           <div className="bg-white p-4 rounded-2xl border border-amber-200 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-wider text-amber-600">Delayed</div>
-            <div className="text-2xl font-black text-amber-600 mt-1">{delayedCount}</div>
+            <div className="text-[10px] font-medium uppercase tracking-wider text-amber-600">Delayed</div>
+            <div className="text-2xl font-medium text-amber-600 mt-1">{delayedCount}</div>
           </div>
           <div className="bg-white p-4 rounded-2xl border border-emerald-200 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-wider text-emerald-600">Completed</div>
-            <div className="text-2xl font-black text-emerald-600 mt-1">{completedCount}</div>
+            <div className="text-[10px] font-medium uppercase tracking-wider text-emerald-600">Completed</div>
+            <div className="text-2xl font-medium text-emerald-600 mt-1">{completedCount}</div>
           </div>
           <div className="bg-white p-4 rounded-2xl border border-rose-200 shadow-sm">
-            <div className="text-[10px] font-black uppercase tracking-wider text-rose-600">Total Rejected (m)</div>
-            <div className="text-2xl font-black text-rose-600 mt-1">{totalRejected}</div>
+            <div className="text-[10px] font-medium uppercase tracking-wider text-rose-600">Total Rejected (m)</div>
+            <div className="text-2xl font-medium text-rose-600 mt-1">{totalRejected}</div>
           </div>
         </div>
       )}

@@ -71,7 +71,7 @@ export default function QIRollDetailPage() {
           Dashboard
         </Link>
         <span className="text-slate-300">/</span>
-        <span className="font-mono font-black text-slate-900">{rollCode}</span>
+        <span className="font-mono font-medium text-slate-900">{rollCode}</span>
       </div>
 
       <RollSummary data={data} onRefresh={loadRoll} basePath="/quality-inspector" />

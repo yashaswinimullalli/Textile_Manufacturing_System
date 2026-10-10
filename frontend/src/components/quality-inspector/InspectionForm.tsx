@@ -126,18 +126,18 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
           {isPass ? <CheckCircle2 className="w-10 h-10" /> : isRework ? <AlertTriangle className="w-10 h-10" /> : <AlertOctagon className="w-10 h-10" />}
         </div>
 
-        <span className={`text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full ${
+        <span className={`text-xs font-medium uppercase tracking-widest px-3 py-1 rounded-full ${
           isPass ? 'bg-emerald-50 text-emerald-700' : isRework ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'
         }`}>
           Quality Check Saved Successfully
         </span>
 
-        <h2 className="text-3xl font-black text-slate-900 mt-2">
+        <h2 className="text-3xl font-medium text-slate-900 mt-2">
           {receiptData.roll_code}: {isPass ? 'APPROVED (PASS)' : isRework ? 'NEEDS REPAIR (REWORK)' : 'SCRAPPED (REJECT)'}
         </h2>
         
         <p className="text-xs text-slate-500 mt-1 font-medium">
-          Official Inspection Slip ID: <code className="font-mono font-bold text-slate-800">{receiptData.inspection_id}</code>
+          Official Inspection Slip ID: <code className="font-mono font-medium text-slate-800">{receiptData.inspection_id}</code>
         </p>
 
         {/* Clear Non-Technical Explanation Box */}
@@ -145,8 +145,8 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
           isPass ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950' : 'bg-amber-50/70 border-amber-200 text-amber-950'
         }`}>
           <div className="flex items-center justify-between pb-3 border-b border-current/10">
-            <span className="text-xs font-bold uppercase tracking-wider">Can this roll leave the factory?</span>
-            <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${
+            <span className="text-xs font-medium uppercase tracking-wider">Can this roll leave the factory?</span>
+            <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${
               isPass ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
             }`}>
               {isPass ? 'YES — READY TO SHIP' : 'NO — SHIPPING BLOCKED'}
@@ -156,14 +156,14 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
           <div className="mt-4 space-y-2 text-xs">
             <div className="flex justify-between">
               <span className="text-slate-600 font-medium">Inspector Name:</span>
-              <span className="font-bold text-slate-900">{receiptData.inspector}</span>
+              <span className="font-medium text-slate-900">{receiptData.inspector}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-600 font-medium">Time Recorded:</span>
-              <span className="font-bold text-slate-900">{new Date(receiptData.timestamp).toLocaleString()}</span>
+              <span className="font-medium text-slate-900">{new Date(receiptData.timestamp).toLocaleString()}</span>
             </div>
             <div className="pt-2">
-              <span className="font-bold block mb-1">What happens now?</span>
+              <span className="font-medium block mb-1">What happens now?</span>
               <p className="bg-white p-3 rounded-xl border border-slate-200 font-medium text-slate-800">
                 {receiptData.next_action}
               </p>
@@ -174,13 +174,13 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
             onClick={() => router.push(successRedirectPath || `/rolls/${roll.roll_code}`)}
-            className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-lg shadow-blue-600/25 transition"
+            className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow-lg shadow-blue-600/25 transition"
           >
             View Roll Status & Timeline
           </button>
           <button
             onClick={() => router.push('/quality')}
-            className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
+            className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
           >
             Check Another Roll
           </button>
@@ -197,16 +197,16 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
         <div>
           <button
             onClick={() => router.push(backPath || '/')}
-            className="inline-flex items-center space-x-1.5 text-xs text-slate-500 hover:text-slate-800 font-bold mb-2 transition"
+            className="inline-flex items-center space-x-1.5 text-xs text-slate-500 hover:text-slate-800 font-medium mb-2 transition"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back to Roll Details</span>
           </button>
           <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-medium text-slate-900 tracking-tight">
               Quality Inspection Form
             </h1>
-            <span className="px-3 py-1 rounded-xl bg-blue-50 text-blue-700 font-mono font-black text-sm border border-blue-200">
+            <span className="px-3 py-1 rounded-xl bg-blue-50 text-blue-700 font-mono font-medium text-sm border border-blue-200">
               {roll.roll_code}
             </span>
           </div>
@@ -217,7 +217,7 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
 
         {priorInspectionId && (
           <div className="px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs shadow-sm">
-            <span className="font-bold block flex items-center gap-1">
+            <span className="font-medium block flex items-center gap-1">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
               Reinspection Check
             </span>
@@ -234,7 +234,7 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
           disabled={isSubmitting}
         />
         {formErrors.decision && (
-          <p className="text-xs text-rose-600 font-bold">{formErrors.decision}</p>
+          <p className="text-xs text-rose-600 font-medium">{formErrors.decision}</p>
         )}
 
         {/* Step 2: Flaw Details (Only shown if defects found) */}
@@ -242,14 +242,14 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
           <div className="p-6 rounded-3xl bg-amber-50/50 border-2 border-amber-200 space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-black text-slate-900">
+                <h3 className="text-sm font-medium text-slate-900">
                   Step 2: Tell us about the flaw
                 </h3>
                 <p className="text-xs text-slate-600">
                   What is wrong with the fabric and how many meters are affected?
                 </p>
               </div>
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
                 Flaw Details Required
               </span>
             </div>
@@ -257,13 +257,13 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {/* Flaw Type */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                <label className="block text-xs font-medium uppercase tracking-wider text-slate-700 mb-2">
                   What kind of flaw is it? <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={defectType}
                   onChange={(e) => setDefectType(e.target.value as DefectType)}
-                  className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600"
+                  className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600"
                 >
                   {CONTROLLED_DEFECT_TYPES.filter(d => d.value !== 'none').map(d => (
                     <option key={d.value} value={d.value}>
@@ -272,17 +272,17 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
                   ))}
                 </select>
                 {formErrors.defect_type && (
-                  <p className="mt-1.5 text-xs text-rose-600 font-bold">{formErrors.defect_type}</p>
+                  <p className="mt-1.5 text-xs text-rose-600 font-medium">{formErrors.defect_type}</p>
                 )}
               </div>
 
               {/* Damaged Meters */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-slate-700">
                     How many meters are damaged? <span className="text-rose-500">*</span>
                   </label>
-                  <span className="text-[11px] font-semibold text-slate-500">
+                  <span className="text-[11px] font-medium text-slate-500">
                     Max: {roll.produced_quantity} {roll.unit}
                   </span>
                 </div>
@@ -294,21 +294,21 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
                     step="0.5"
                     value={affectedQuantity}
                     onChange={(e) => setAffectedQuantity(e.target.value)}
-                    className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600"
+                    className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600"
                   />
-                  <span className="absolute right-4 top-3 text-xs font-bold text-slate-400">
+                  <span className="absolute right-4 top-3 text-xs font-medium text-slate-400">
                     meters
                   </span>
                 </div>
                 {formErrors.affected_quantity && (
-                  <p className="mt-1.5 text-xs text-rose-600 font-bold">{formErrors.affected_quantity}</p>
+                  <p className="mt-1.5 text-xs text-rose-600 font-medium">{formErrors.affected_quantity}</p>
                 )}
               </div>
             </div>
 
             {/* Visual Roll Meter Bar - Very intuitive for non-technical users */}
             <div className="bg-white p-4 rounded-2xl border border-amber-200 space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold">
+              <div className="flex items-center justify-between text-xs font-medium">
                 <span className="text-rose-700 flex items-center gap-1">
                   <Scissors className="w-3.5 h-3.5" />
                   Damaged: {affectedNum} meters ({affectedPct.toFixed(0)}% of roll)
@@ -332,13 +332,13 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
             {/* Flaw Position & Severity */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                <label className="block text-xs font-medium uppercase tracking-wider text-slate-700 mb-1.5">
                   How severe is the damage?
                 </label>
                 <select
                   value={severity}
                   onChange={(e) => setSeverity(e.target.value as any)}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800"
+                  className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-800"
                 >
                   <option value="low">Low — Minor flaw, easy to clean</option>
                   <option value="medium">Medium — Needs proper scouring / chemical wash</option>
@@ -348,7 +348,7 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                <label className="block text-xs font-medium uppercase tracking-wider text-slate-700 mb-1.5">
                   Where is it on the cloth?
                 </label>
                 <input
@@ -365,7 +365,7 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
           <div className="p-6 rounded-3xl bg-emerald-50/60 border border-emerald-200 flex items-start space-x-3.5">
             <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
             <div>
-              <h3 className="text-sm font-black text-emerald-900">
+              <h3 className="text-sm font-medium text-emerald-900">
                 Fabric Approved as 100% Clean
               </h3>
               <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
@@ -377,7 +377,7 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
 
         {/* Step 3: Inspector Notes */}
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+          <label className="block text-xs font-medium uppercase tracking-wider text-slate-700 mb-2">
             Step 3: Notes & Instructions for the floor
           </label>
           <textarea
@@ -410,14 +410,14 @@ export default function InspectionForm({ roll, priorInspectionId, onSuccess, suc
           <button
             onClick={() => router.push(backPath || '/')}
             disabled={isSubmitting}
-            className="px-5 py-3 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50"
+            className="px-5 py-3 rounded-xl border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`px-8 py-3.5 rounded-2xl text-xs font-black text-white shadow-xl transition cursor-pointer disabled:opacity-50 ${
+            className={`px-8 py-3.5 rounded-2xl text-xs font-medium text-white shadow-xl transition cursor-pointer disabled:opacity-50 ${
               decision === 'PASS' 
                 ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30 ring-2 ring-emerald-400/30'
                 : decision === 'REWORK'

@@ -65,7 +65,7 @@ export default function QIInspectPage() {
         <span className="text-slate-300">/</span>
         <Link href={`/quality-inspector/rolls/${rollCode}`} className="text-slate-500 hover:text-slate-800 font-medium font-mono">{rollCode}</Link>
         <span className="text-slate-300">/</span>
-        <span className="font-bold text-slate-900">Inspect</span>
+        <span className="font-medium text-slate-900">Inspect</span>
       </div>
 
       <InspectionForm

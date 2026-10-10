@@ -47,16 +47,16 @@ function AuditEventCard({ event }: { event: AuditEvent }) {
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-black text-slate-900">{event.actor_name}</span>
-              <span className="text-[10px] font-bold text-slate-500">{roleLabel[event.actor_role] || event.actor_role}</span>
-              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase border ${badgeClass}`}>
+              <span className="text-xs font-medium text-slate-900">{event.actor_name}</span>
+              <span className="text-[10px] font-medium text-slate-500">{roleLabel[event.actor_role] || event.actor_role}</span>
+              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-medium uppercase border ${badgeClass}`}>
                 {event.action.replace(/_/g, ' ')}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
               <span className="text-xs text-slate-600 font-medium">
                 <Tag className="w-3 h-3 inline mr-0.5 text-slate-400" />
-                {event.entity_type}: <span className="font-mono font-bold">{event.entity_id}</span>
+                {event.entity_type}: <span className="font-mono font-medium">{event.entity_id}</span>
               </span>
               {event.reason && (
                 <span className="text-[11px] text-slate-500 font-medium">"{event.reason}"</span>
@@ -82,7 +82,7 @@ function AuditEventCard({ event }: { event: AuditEvent }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
             {event.before_json && (
               <div>
-                <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">Before</div>
+                <div className="text-[10px] font-medium uppercase tracking-wider text-slate-400 mb-2">Before</div>
                 <pre className="bg-white border border-slate-200 rounded-xl p-3 text-[10px] text-slate-700 overflow-x-auto leading-relaxed">
                   {JSON.stringify(event.before_json, null, 2)}
                 </pre>
@@ -90,7 +90,7 @@ function AuditEventCard({ event }: { event: AuditEvent }) {
             )}
             {event.after_json && (
               <div>
-                <div className="text-[10px] font-black uppercase tracking-wider text-emerald-600 mb-2">After</div>
+                <div className="text-[10px] font-medium uppercase tracking-wider text-emerald-600 mb-2">After</div>
                 <pre className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-[10px] text-slate-700 overflow-x-auto leading-relaxed">
                   {JSON.stringify(event.after_json, null, 2)}
                 </pre>
@@ -137,7 +137,7 @@ export default function OwnerAuditPage() {
         <div>
           <div className="flex items-center space-x-2 mb-1">
             <History className="w-5 h-5 text-slate-700" />
-            <h1 className="text-xl font-black text-slate-900">Audit History</h1>
+            <h1 className="text-xl font-medium text-slate-900">Audit History</h1>
           </div>
           <p className="text-sm text-slate-500">
             Complete record of who performed what actions, when, and what changed.
@@ -150,7 +150,7 @@ export default function OwnerAuditPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-wrap items-center gap-3">
-        <div className="flex items-center space-x-2 text-xs font-bold text-slate-500">
+        <div className="flex items-center space-x-2 text-xs font-medium text-slate-500">
           <Filter className="w-3.5 h-3.5" />
           <span>Filters:</span>
         </div>
@@ -158,7 +158,7 @@ export default function OwnerAuditPage() {
         <select
           value={entityTypeFilter}
           onChange={e => setEntityTypeFilter(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
         >
           <option value="">All Records</option>
           <option value="roll">Roll Records</option>
@@ -170,7 +170,7 @@ export default function OwnerAuditPage() {
         <select
           value={actionFilter}
           onChange={e => setActionFilter(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
         >
           <option value="">All Actions</option>
           <option value="INSPECTION_CREATED">Inspection Created</option>
@@ -182,7 +182,7 @@ export default function OwnerAuditPage() {
         {(entityTypeFilter || actionFilter) && (
           <button
             onClick={() => { setEntityTypeFilter(''); setActionFilter(''); }}
-            className="text-xs text-blue-600 hover:underline font-bold"
+            className="text-xs text-blue-600 hover:underline font-medium"
           >
             Reset filters
           </button>
@@ -201,7 +201,7 @@ export default function OwnerAuditPage() {
       ) : events.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center">
           <History className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-sm font-bold text-slate-700">No audit events found</h3>
+          <h3 className="text-sm font-medium text-slate-700">No audit events found</h3>
           <p className="text-xs text-slate-500 mt-1">Try adjusting your filters or perform some actions to see the audit trail.</p>
         </div>
       ) : (

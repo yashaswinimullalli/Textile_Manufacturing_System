@@ -85,7 +85,7 @@ export default function EmployeeDirectory() {
               <Users className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Employee Directory</h1>
+              <h1 className="text-2xl font-medium text-slate-900">Employee Directory</h1>
               <p className="text-sm text-slate-500 mt-1">Detailed view of workforce salaries and departments.</p>
             </div>
           </div>
@@ -93,7 +93,7 @@ export default function EmployeeDirectory() {
 
         <button 
           onClick={handlePrint}
-          className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-sm"
+          className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition-all shadow-sm"
         >
           <Printer className="w-4 h-4" />
           <span>Print Directory</span>
@@ -104,7 +104,7 @@ export default function EmployeeDirectory() {
       <div className="mb-8 print:hidden bg-white p-2 rounded-xl border border-slate-200 shadow-sm inline-flex flex-wrap gap-2">
         <button
           onClick={() => setActiveDeptIndex('ALL')}
-          className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             activeDeptIndex === 'ALL'
               ? 'bg-indigo-600 text-white shadow-sm'
               : 'text-slate-600 hover:bg-slate-100'
@@ -116,7 +116,7 @@ export default function EmployeeDirectory() {
           <button
             key={dept.name}
             onClick={() => setActiveDeptIndex(idx)}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
               activeDeptIndex === idx
                 ? 'bg-indigo-600 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -133,7 +133,7 @@ export default function EmployeeDirectory() {
         
         {/* Print Only Header */}
         <div className="hidden print:block p-8 border-b border-slate-200">
-          <h1 className="text-2xl font-black text-slate-900">FabricTrace Employee Directory</h1>
+          <h1 className="text-2xl font-medium text-slate-900">FabricTrace Employee Directory</h1>
           <p className="text-slate-500 mt-1">Generated on: {new Date().toLocaleDateString()}</p>
         </div>
 
@@ -148,13 +148,13 @@ export default function EmployeeDirectory() {
                     <Briefcase className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-slate-800">{dept.name} Department</h2>
+                    <h2 className="text-xl font-medium text-slate-800">{dept.name} Department</h2>
                     <p className="text-sm text-slate-500">{dept.employees.length} Active Employees</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Dept Daily Wage</span>
-                  <span className="text-xl font-black text-indigo-700">{formatCurrency(deptTotal)}</span>
+                  <span className="block text-xs font-medium text-slate-400 uppercase tracking-wider">Dept Daily Wage</span>
+                  <span className="text-xl font-medium text-indigo-700">{formatCurrency(deptTotal)}</span>
                 </div>
               </div>
 
@@ -162,16 +162,16 @@ export default function EmployeeDirectory() {
                 <table className="w-full text-left text-sm">
                   <thead className="bg-white border-b border-slate-200 text-slate-500">
                     <tr>
-                      <th className="py-4 px-6 font-bold uppercase tracking-wider text-xs">Employee Name</th>
-                      <th className="py-4 px-6 font-bold uppercase tracking-wider text-xs">Role</th>
-                      <th className="py-4 px-6 font-bold uppercase tracking-wider text-xs text-right">Daily Wage</th>
+                      <th className="py-4 px-6 font-medium uppercase tracking-wider text-xs">Employee Name</th>
+                      <th className="py-4 px-6 font-medium uppercase tracking-wider text-xs">Role</th>
+                      <th className="py-4 px-6 font-medium uppercase tracking-wider text-xs text-right">Daily Wage</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {dept.employees.map((emp, i) => (
                       <tr key={i} className="hover:bg-slate-50 transition-colors print:hover:bg-white">
-                        <td className="py-4 px-6 font-semibold text-slate-800 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs print:hidden border border-slate-200">
+                        <td className="py-4 px-6 font-medium text-slate-800 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-medium text-xs print:hidden border border-slate-200">
                             {emp.name.charAt(0)}
                           </div>
                           {emp.name}

@@ -61,14 +61,14 @@ export default function DecisionSelector({ value, onChange, disabled = false }: 
     <div>
       <div className="flex items-center justify-between mb-3">
         <div>
-          <label className="block text-sm font-black text-slate-900 tracking-tight">
+          <label className="block text-sm font-medium text-slate-900 tracking-tight">
             Step 1: What is your quality decision? <span className="text-rose-500">*</span>
           </label>
           <p className="text-xs text-slate-500">
             Choose what should happen to this fabric roll
           </p>
         </div>
-        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+        <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
           Required Choice
         </span>
       </div>
@@ -89,7 +89,7 @@ export default function DecisionSelector({ value, onChange, disabled = false }: 
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className={`text-base font-black tracking-tight ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                  <span className={`text-base font-medium tracking-tight ${isSelected ? 'text-white' : 'text-slate-900'}`}>
                     {opt.label}
                   </span>
                   <Icon className={`w-6 h-6 shrink-0 ${isSelected ? 'text-white' : 'text-slate-400'}`} />
@@ -100,12 +100,12 @@ export default function DecisionSelector({ value, onChange, disabled = false }: 
               </div>
 
               <div className="mt-4 pt-3 border-t border-current/20">
-                <div className={`text-[11px] font-bold px-2.5 py-1 rounded-lg inline-block ${
+                <div className={`text-[11px] font-medium px-2.5 py-1 rounded-lg inline-block ${
                   isSelected ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-700'
                 }`}>
                   {opt.badgeText}
                 </div>
-                <div className={`text-[10px] mt-1 font-semibold ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
+                <div className={`text-[10px] mt-1 font-medium ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
                   {opt.actionImpact}
                 </div>
               </div>

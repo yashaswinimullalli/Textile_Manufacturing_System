@@ -14,31 +14,31 @@ export default function DefectAnalysisPage() {
   return (
     <div className="max-w-4xl space-y-6 font-sans">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-slate-800">Defect Analysis</h2>
+        <h2 className="text-xl font-medium text-slate-800">Defect Analysis</h2>
         <p className="text-sm text-slate-500 mt-1">Overview of common flaws found during inspection.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm text-center">
           <p className="text-sm font-medium text-slate-500 mb-1">Total Flaws</p>
-          <p className="text-3xl font-semibold text-slate-800">24</p>
+          <p className="text-3xl font-medium text-slate-800">24</p>
         </div>
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm text-center">
           <p className="text-sm font-medium text-slate-500 mb-1">Top Issue</p>
-          <p className="text-lg font-semibold text-red-600 mt-2">Holes / Tears</p>
+          <p className="text-lg font-medium text-red-600 mt-2">Holes / Tears</p>
         </div>
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm text-center">
           <p className="text-sm font-medium text-slate-500 mb-1">Affected Yardage</p>
-          <p className="text-3xl font-semibold text-amber-600">360m</p>
+          <p className="text-3xl font-medium text-amber-600">360m</p>
         </div>
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm text-center">
           <p className="text-sm font-medium text-slate-500 mb-1">Overall Rate</p>
-          <p className="text-3xl font-semibold text-teal-600">2.4%</p>
+          <p className="text-3xl font-medium text-teal-600">2.4%</p>
         </div>
       </div>
 
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <h3 className="text-base font-semibold text-slate-800 mb-4">Flaw Breakdown</h3>
+        <h3 className="text-base font-medium text-slate-800 mb-4">Flaw Breakdown</h3>
         <div className="space-y-5">
           {defects.map((d) => (
             <div key={d.name}>

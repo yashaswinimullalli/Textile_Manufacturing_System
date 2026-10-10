@@ -319,7 +319,7 @@ export default function StageInspectionTracker() {
         {/* ─── LEFT: 50 Yarn Rolls List ─────────────────────────────────── */}
         <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
           <div className="p-4 border-b border-slate-100">
-            <p className="text-xs font-semibold text-slate-500 mb-1.5">50 Yarn Batches</p>
+            <p className="text-xs font-medium text-slate-500 mb-1.5">50 Yarn Batches</p>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -347,20 +347,20 @@ export default function StageInspectionTracker() {
                   }`}
                 >
                   <div className="min-w-0">
-                    <p className={`text-sm font-semibold truncate ${isSelected ? 'text-teal-800' : 'text-slate-800'}`}>{roll.name}</p>
+                    <p className={`text-sm font-medium truncate ${isSelected ? 'text-teal-800' : 'text-slate-800'}`}>{roll.name}</p>
                     <p className="text-xs text-slate-400 font-mono mt-0.5">{roll.code} · {roll.customer}</p>
                   </div>
                   <div className="shrink-0">
                     {rej ? (
-                      <span className="text-[10px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Rejected</span>
+                      <span className="text-[10px] font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Rejected</span>
                     ) : rwork ? (
-                      <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">Rework</span>
+                      <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">Rework</span>
                     ) : passed === 4 ? (
-                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Ready</span>
+                      <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Ready</span>
                     ) : passed > 0 ? (
-                      <span className="text-[10px] font-semibold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full">{passed}/4</span>
+                      <span className="text-[10px] font-medium text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full">{passed}/4</span>
                     ) : (
-                      <span className="text-[10px] font-semibold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Pending</span>
+                      <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">Pending</span>
                     )}
                   </div>
                 </button>
@@ -377,7 +377,7 @@ export default function StageInspectionTracker() {
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
                 <p className="text-xs font-mono text-slate-400 mb-0.5">{selectedRoll?.code}</p>
-                <h2 className="text-xl font-semibold text-slate-900">{selectedRoll?.name}</h2>
+                <h2 className="text-xl font-medium text-slate-900">{selectedRoll?.name}</h2>
                 <p className="text-sm text-slate-500 mt-1">{selectedRoll?.weight} · {selectedRoll?.color} · <span className="font-medium text-slate-700">{selectedRoll?.customer}</span></p>
                 <p className="text-xs text-slate-400 font-mono mt-1">Order: {selectedRoll?.orderRef}</p>
               </div>
@@ -419,7 +419,7 @@ export default function StageInspectionTracker() {
 
           {/* ─── Vertical Stage Roadmap Card ──────────────────────────── */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <h3 className="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2">
+            <h3 className="text-sm font-medium text-slate-700 mb-5 flex items-center gap-2">
               <Layers className="w-4 h-4 text-teal-600" />
               Manufacturing Stage Journey
             </h3>
@@ -462,7 +462,7 @@ export default function StageInspectionTracker() {
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="text-xs font-mono text-slate-400 shrink-0">{String(stage.seq).padStart(2, '0')}</span>
                             <div className="min-w-0">
-                              <p className={`text-sm font-semibold ${isActive ? stage.accentClass : 'text-slate-800'}`}>{stage.label}</p>
+                              <p className={`text-sm font-medium ${isActive ? stage.accentClass : 'text-slate-800'}`}>{stage.label}</p>
                               <p className="text-xs text-slate-500 mt-0.5">{stage.description}</p>
                             </div>
                           </div>
@@ -552,7 +552,7 @@ export default function StageInspectionTracker() {
                                     className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition active:scale-95 cursor-pointer"
                                   >
                                     <Check className="w-5 h-5" />
-                                    <span className="text-xs font-semibold">Pass</span>
+                                    <span className="text-xs font-medium">Pass</span>
                                     <span className="text-[10px] text-emerald-600">Good to proceed</span>
                                   </button>
                                   <button
@@ -560,7 +560,7 @@ export default function StageInspectionTracker() {
                                     className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition active:scale-95 cursor-pointer"
                                   >
                                     <RotateCcw className="w-5 h-5" />
-                                    <span className="text-xs font-semibold">Rework</span>
+                                    <span className="text-xs font-medium">Rework</span>
                                     <span className="text-[10px] text-amber-600">Send back to fix</span>
                                   </button>
                                   <button
@@ -568,7 +568,7 @@ export default function StageInspectionTracker() {
                                     className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition active:scale-95 cursor-pointer"
                                   >
                                     <X className="w-5 h-5" />
-                                    <span className="text-xs font-semibold">Reject</span>
+                                    <span className="text-xs font-medium">Reject</span>
                                     <span className="text-[10px] text-red-600">Cannot proceed</span>
                                   </button>
                                 </div>
@@ -584,7 +584,7 @@ export default function StageInspectionTracker() {
                                       {stageInsp.records.map((rec) => (
                                         <div key={rec.id} className="text-xs bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
                                           <div className="flex items-center justify-between gap-2 flex-wrap">
-                                            <span className={`font-semibold capitalize ${rec.decision === 'pass' ? 'text-emerald-700' : rec.decision === 'rework' ? 'text-amber-700' : 'text-red-700'}`}>
+                                            <span className={`font-medium capitalize ${rec.decision === 'pass' ? 'text-emerald-700' : rec.decision === 'rework' ? 'text-amber-700' : 'text-red-700'}`}>
                                               {rec.decision}
                                             </span>
                                             <span className="text-slate-400">{new Date(rec.date).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
@@ -610,14 +610,14 @@ export default function StageInspectionTracker() {
 
           {/* ─── Journey Summary ──────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <h3 className="text-sm font-semibold text-slate-700 mb-4">Fabric Journey at a Glance</h3>
+            <h3 className="text-sm font-medium text-slate-700 mb-4">Fabric Journey at a Glance</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {STAGES.map((stage) => {
                 const s = stages[stage.id];
                 return (
                   <div key={stage.id} className={`rounded-xl border p-3 text-center ${statusColors(s.status)}`}>
                     <div className="flex justify-center mb-1.5">{statusIcon(s.status)}</div>
-                    <p className="text-xs font-semibold text-slate-700">{stage.label}</p>
+                    <p className="text-xs font-medium text-slate-700">{stage.label}</p>
                     <p className={`text-[11px] mt-0.5 font-medium ${s.status === 'passed' ? 'text-emerald-600' : s.status === 'rework' ? 'text-amber-600' : s.status === 'rejected' ? 'text-red-600' : 'text-slate-400'}`}>
                       {statusLabel(s.status)}
                     </p>
@@ -638,12 +638,6 @@ export default function StageInspectionTracker() {
               <div className="mt-3 flex items-start gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
                 <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
                 <span>All 4 stages passed. This roll is <strong>eligible for dispatch.</strong></span>
-              </div>
-            )}
-            {!anyRejected && !allPassed && (
-              <div className="mt-3 flex items-start gap-2 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-                <Clock className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>Data shown is session-only. No database connected — records are not permanently saved.</span>
               </div>
             )}
           </div>

@@ -153,7 +153,7 @@ export default function OwnerDashboard() {
       
       {/* ─── Page Header ──────────────────────────────────────────────────────── */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Owner Dashboard</h1>
+        <h1 className="text-2xl font-medium text-slate-900">Owner Dashboard</h1>
         <p className="text-sm text-slate-500 mt-1">Financial overview, comprehensive calendar, and workforce management.</p>
       </div>
 
@@ -167,7 +167,7 @@ export default function OwnerDashboard() {
                 <CalendarIcon className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-800">Financial Calendar</h2>
+                <h2 className="text-xl font-medium text-slate-800">Financial Calendar</h2>
                 <p className="text-xs text-slate-500">Track daily profits and expenses.</p>
               </div>
             </div>
@@ -180,7 +180,7 @@ export default function OwnerDashboard() {
               >
                 <ChevronLeft className="w-5 h-5 text-slate-700" />
               </button>
-              <span className="font-bold text-slate-800 text-sm min-w-[100px] text-center">
+              <span className="font-medium text-slate-800 text-sm min-w-[100px] text-center">
                 {MONTHS[currentMonthIdx]} {currentYear}
               </span>
               <button 
@@ -195,7 +195,7 @@ export default function OwnerDashboard() {
 
           <div className="grid grid-cols-7 gap-2">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center text-xs font-bold text-slate-400 uppercase py-2">
+              <div key={day} className="text-center text-xs font-medium text-slate-400 uppercase py-2">
                 {day}
               </div>
             ))}
@@ -219,9 +219,9 @@ export default function OwnerDashboard() {
                       : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700 hover:border-teal-300'
                   }`}
                 >
-                  <span className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-slate-700'}`}>{data.day}</span>
+                  <span className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-slate-700'}`}>{data.day}</span>
                   <div className="w-full text-center mt-auto">
-                    <span className={`block text-[10px] font-mono font-bold leading-none ${
+                    <span className={`block text-[10px] font-mono font-medium leading-none ${
                       isSelected 
                         ? (isProfit ? 'text-emerald-400' : 'text-rose-400')
                         : (isProfit ? 'text-emerald-600' : 'text-rose-600')
@@ -239,7 +239,7 @@ export default function OwnerDashboard() {
                 key={`future-${i}`}
                 className="relative p-2 rounded-xl flex flex-col justify-center items-center border border-slate-100 bg-slate-50 opacity-40 cursor-not-allowed h-20"
               >
-                <span className="text-sm font-bold text-slate-400">{daysInMonth + i + 1}</span>
+                <span className="text-sm font-medium text-slate-400">{daysInMonth + i + 1}</span>
               </div>
             ))}
           </div>
@@ -253,7 +253,7 @@ export default function OwnerDashboard() {
                 <TrendingUp className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-800">Daily Financial Report</h2>
+                <h2 className="text-lg font-medium text-slate-800">Daily Financial Report</h2>
                 <p className="text-xs text-slate-500 font-mono">
                   {selectedDate.day} {MONTHS[selectedDate.month]} {selectedDate.year}
                 </p>
@@ -263,20 +263,20 @@ export default function OwnerDashboard() {
             <div className="space-y-3">
               <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <span className="text-sm font-medium text-slate-600">Total Revenue (Sales)</span>
-                <span className="text-lg font-bold text-slate-900">{formatCurrency(activeDayData.revenue)}</span>
+                <span className="text-lg font-medium text-slate-900">{formatCurrency(activeDayData.revenue)}</span>
               </div>
               <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <span className="text-sm font-medium text-slate-600">Raw Materials Cost</span>
-                <span className="text-base font-bold text-rose-600">-{formatCurrency(activeDayData.materials)}</span>
+                <span className="text-base font-medium text-rose-600">-{formatCurrency(activeDayData.materials)}</span>
               </div>
               <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <span className="text-sm font-medium text-slate-600">Total Daily Wages</span>
-                <span className="text-base font-bold text-rose-600">-{formatCurrency(totalDailyWages)}</span>
+                <span className="text-base font-medium text-rose-600">-{formatCurrency(totalDailyWages)}</span>
               </div>
               {activeDayData.maintenance > 0 && (
                 <div className="flex justify-between items-center p-4 bg-rose-50 rounded-xl border border-rose-100">
                   <span className="text-sm font-medium text-rose-700">Maintenance & Repairs</span>
-                  <span className="text-base font-bold text-rose-700">-{formatCurrency(activeDayData.maintenance)}</span>
+                  <span className="text-base font-medium text-rose-700">-{formatCurrency(activeDayData.maintenance)}</span>
                 </div>
               )}
             </div>
@@ -285,8 +285,8 @@ export default function OwnerDashboard() {
           <div className={`flex justify-between items-center p-5 rounded-xl border mt-6 ${
             activeDayData.netProfit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'
           }`}>
-            <span className={`text-sm font-bold ${activeDayData.netProfit >= 0 ? 'text-emerald-900' : 'text-rose-900'}`}>Net Daily Profit</span>
-            <span className={`text-2xl font-black ${activeDayData.netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+            <span className={`text-sm font-medium ${activeDayData.netProfit >= 0 ? 'text-emerald-900' : 'text-rose-900'}`}>Net Daily Profit</span>
+            <span className={`text-2xl font-medium ${activeDayData.netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
               {formatCurrency(activeDayData.netProfit)}
             </span>
           </div>
@@ -300,13 +300,13 @@ export default function OwnerDashboard() {
             <Briefcase className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-800">Workforce & Departments</h2>
+            <h2 className="text-xl font-medium text-slate-800">Workforce & Departments</h2>
             <p className="text-sm text-slate-500">Manage all factory employees and print daily wage distributions.</p>
           </div>
         </div>
         <Link 
           href="/owner/employees"
-          className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-sm"
+          className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-all shadow-sm"
         >
           <span>View Employee Directory</span>
           <ExternalLink className="w-4 h-4" />
@@ -314,41 +314,41 @@ export default function OwnerDashboard() {
       </div>
 
       {/* ─── Monthly Summary ────────────────────────────────────────────────── */}
-      <div className="bg-slate-900 rounded-2xl shadow-lg p-6 sm:p-8 text-white relative overflow-hidden">
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl shadow-sm p-6 sm:p-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
-          <FileText className="w-48 h-48" />
+          <FileText className="w-48 h-48 text-slate-800" />
         </div>
         <div className="relative z-10">
-          <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-700">
+          <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
             <div>
-              <h2 className="text-xl font-bold text-white">Monthly Summary</h2>
-              <p className="text-sm text-slate-400">Total aggregation for {MONTHS[currentMonthIdx]} {currentYear}</p>
+              <h2 className="text-xl font-medium text-slate-800">Monthly Summary</h2>
+              <p className="text-sm text-slate-500">Total aggregation for {MONTHS[currentMonthIdx]} {currentYear}</p>
             </div>
-            <span className="px-4 py-1.5 rounded-full bg-slate-800 text-teal-400 font-bold text-xs tracking-wider uppercase">
+            <span className="px-4 py-1.5 rounded-full bg-indigo-100 text-indigo-700 font-medium text-xs tracking-wider uppercase">
               Financial Overview
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            <div className="bg-slate-800/50 p-4 lg:p-5 rounded-xl border border-slate-700">
-              <p className="text-xs lg:text-sm font-bold text-slate-400 mb-1">Total Revenue</p>
-              <p className="text-xl lg:text-2xl font-bold text-white break-words">{formatCurrency(monthlyTotals.revenue)}</p>
+            <div className="bg-white p-4 lg:p-5 rounded-xl border border-slate-200">
+              <p className="text-xs lg:text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
+              <p className="text-xl lg:text-2xl font-medium text-slate-800 break-words">{formatCurrency(monthlyTotals.revenue)}</p>
             </div>
-            <div className="bg-slate-800/50 p-4 lg:p-5 rounded-xl border border-slate-700">
-              <p className="text-xs lg:text-sm font-bold text-slate-400 mb-1">Total Materials</p>
-              <p className="text-xl lg:text-2xl font-bold text-rose-400 break-words">-{formatCurrency(monthlyTotals.materials)}</p>
+            <div className="bg-white p-4 lg:p-5 rounded-xl border border-slate-200">
+              <p className="text-xs lg:text-sm font-medium text-slate-500 mb-1">Total Materials</p>
+              <p className="text-xl lg:text-2xl font-medium text-slate-600 break-words">-{formatCurrency(monthlyTotals.materials)}</p>
             </div>
-            <div className="bg-slate-800/50 p-4 lg:p-5 rounded-xl border border-slate-700">
-              <p className="text-xs lg:text-sm font-bold text-slate-400 mb-1">Total Wages Paid</p>
-              <p className="text-xl lg:text-2xl font-bold text-rose-400 break-words">-{formatCurrency(monthlyTotals.wages)}</p>
+            <div className="bg-white p-4 lg:p-5 rounded-xl border border-slate-200">
+              <p className="text-xs lg:text-sm font-medium text-slate-500 mb-1">Total Wages Paid</p>
+              <p className="text-xl lg:text-2xl font-medium text-slate-600 break-words">-{formatCurrency(monthlyTotals.wages)}</p>
             </div>
-            <div className="bg-slate-800/50 p-4 lg:p-5 rounded-xl border border-slate-700">
-              <p className="text-xs lg:text-sm font-bold text-slate-400 mb-1">Maintenance</p>
-              <p className="text-xl lg:text-2xl font-bold text-rose-400 break-words">-{formatCurrency(monthlyTotals.maintenance)}</p>
+            <div className="bg-white p-4 lg:p-5 rounded-xl border border-slate-200">
+              <p className="text-xs lg:text-sm font-medium text-slate-500 mb-1">Maintenance</p>
+              <p className="text-xl lg:text-2xl font-medium text-slate-600 break-words">-{formatCurrency(monthlyTotals.maintenance)}</p>
             </div>
-            <div className="bg-teal-900/40 p-4 lg:p-5 rounded-xl border border-teal-800 flex flex-col justify-center">
-              <p className="text-xs lg:text-sm font-bold text-teal-200 mb-1">Net Monthly Profit</p>
-              <p className="text-xl lg:text-2xl font-black text-teal-400 truncate">{formatCurrency(monthlyTotals.profit)}</p>
+            <div className="bg-indigo-50 p-4 lg:p-5 rounded-xl border border-indigo-100 flex flex-col justify-center">
+              <p className="text-xs lg:text-sm font-medium text-indigo-800 mb-1">Net Monthly Profit</p>
+              <p className="text-xl lg:text-2xl font-medium text-indigo-700 truncate">{formatCurrency(monthlyTotals.profit)}</p>
             </div>
           </div>
         </div>

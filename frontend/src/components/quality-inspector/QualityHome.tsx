@@ -53,11 +53,11 @@ export default function QualityHome() {
       {/* Hero Welcome Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border border-slate-800 shadow-xl relative overflow-hidden">
         <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold mb-3">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-medium mb-3">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Floor Quality Terminal • Station 1</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+          <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-white">
             Quality Inspection Gate
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
@@ -68,7 +68,7 @@ export default function QualityHome() {
           <div className="mt-6 flex flex-wrap gap-3">
             <button
               onClick={() => setActiveTab('scan')}
-              className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-black transition shadow-lg cursor-pointer ${
+              className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-medium transition shadow-lg cursor-pointer ${
                 activeTab === 'scan'
                   ? 'bg-teal-400 text-slate-950 shadow-teal-400/20 ring-2 ring-teal-300'
                   : 'bg-slate-800 text-white hover:bg-slate-700'
@@ -79,7 +79,7 @@ export default function QualityHome() {
             </button>
             <button
               onClick={() => setActiveTab('lookup')}
-              className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-black transition shadow-lg cursor-pointer ${
+              className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-medium transition shadow-lg cursor-pointer ${
                 activeTab === 'lookup'
                   ? 'bg-blue-600 text-white shadow-blue-600/20 ring-2 ring-blue-400'
                   : 'bg-slate-800 text-white hover:bg-slate-700'
@@ -90,7 +90,7 @@ export default function QualityHome() {
             </button>
             <button
               onClick={() => setActiveTab('queue')}
-              className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-black transition shadow-lg cursor-pointer ${
+              className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-medium transition shadow-lg cursor-pointer ${
                 activeTab === 'queue'
                   ? 'bg-amber-600 text-white shadow-amber-600/20 ring-2 ring-amber-400'
                   : 'bg-slate-800 text-white hover:bg-slate-700'
@@ -111,8 +111,8 @@ export default function QualityHome() {
               <Clock className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">Needs Inspection</span>
-              <span className="text-2xl font-black text-slate-900">{summary.counts.needs_inspection}</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400 block">Needs Inspection</span>
+              <span className="text-2xl font-medium text-slate-900">{summary.counts.needs_inspection}</span>
               <span className="text-[10px] text-slate-500 block font-medium">New rolls waiting for first check</span>
             </div>
           </div>
@@ -122,8 +122,8 @@ export default function QualityHome() {
               <RefreshCw className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-[11px] font-black uppercase tracking-wider text-amber-700 block">Needs Re-check</span>
-              <span className="text-2xl font-black text-amber-600">{summary.counts.rework_due}</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-amber-700 block">Needs Re-check</span>
+              <span className="text-2xl font-medium text-amber-600">{summary.counts.rework_due}</span>
               <span className="text-[10px] text-slate-500 block font-medium">Repaired cloth waiting second check</span>
             </div>
           </div>
@@ -133,8 +133,8 @@ export default function QualityHome() {
               <XCircle className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-[11px] font-black uppercase tracking-wider text-rose-700 block">Scrapped (Reject)</span>
-              <span className="text-2xl font-black text-rose-600">{summary.counts.recently_rejected}</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-rose-700 block">Scrapped (Reject)</span>
+              <span className="text-2xl font-medium text-rose-600">{summary.counts.recently_rejected}</span>
               <span className="text-[10px] text-slate-500 block font-medium">Permanently blocked from trucks</span>
             </div>
           </div>
@@ -144,8 +144,8 @@ export default function QualityHome() {
               <CheckCircle2 className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700 block">Checked Today</span>
-              <span className="text-2xl font-black text-emerald-600">{summary.counts.inspected_today}</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-emerald-700 block">Checked Today</span>
+              <span className="text-2xl font-medium text-emerald-600">{summary.counts.inspected_today}</span>
               <span className="text-[10px] text-slate-500 block font-medium">Rolls tested during this shift</span>
             </div>
           </div>
@@ -178,7 +178,7 @@ export default function QualityHome() {
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-1">
             <div>
-              <h2 className="text-base font-black text-slate-900">Recent Quality Checks on Mill Floor</h2>
+              <h2 className="text-base font-medium text-slate-900">Recent Quality Checks on Mill Floor</h2>
               <p className="text-xs text-slate-500">Live records from inspector slips (Click any row to open fabric passport)</p>
             </div>
             <span className="text-xs text-slate-400">Showing last 10 entries</span>
@@ -186,7 +186,7 @@ export default function QualityHome() {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+              <thead className="bg-slate-50 text-slate-600 font-medium uppercase text-[10px] tracking-wider border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-4">Roll Code</th>
                   <th className="py-3 px-4">Decision</th>
@@ -204,18 +204,18 @@ export default function QualityHome() {
                     onClick={() => router.push(`/rolls/${act.roll_code}`)}
                     className="hover:bg-slate-50/80 cursor-pointer transition group"
                   >
-                    <td className="py-3.5 px-4 font-mono font-black text-slate-900 group-hover:text-blue-600">
+                    <td className="py-3.5 px-4 font-mono font-medium text-slate-900 group-hover:text-blue-600">
                       {act.roll_code}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide ${getDecisionBadgeClass(act.decision)}`}>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-medium tracking-wide ${getDecisionBadgeClass(act.decision)}`}>
                         {act.decision}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-800 font-bold">
+                    <td className="py-3.5 px-4 text-slate-800 font-medium">
                       {getFriendlyFlawName(act.defect_type)}
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-700">
+                    <td className="py-3.5 px-4 font-medium text-slate-700">
                       {act.affected_quantity > 0 ? `${act.affected_quantity} ${act.unit}` : '0 meters'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-600 font-medium">

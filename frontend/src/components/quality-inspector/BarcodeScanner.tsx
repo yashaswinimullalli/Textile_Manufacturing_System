@@ -142,7 +142,7 @@ export default function BarcodeScanner({ onScan, redirectOnScan = true }: Barcod
               <BarcodeIcon className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-xs font-black text-white">1D Linear Barcode Scanner</span>
+              <span className="text-xs font-medium text-white">1D Linear Barcode Scanner</span>
               <span className="block text-[10px] text-slate-400">Code 128 / Code 39 Roll Identification Tags</span>
             </div>
           </div>
@@ -152,7 +152,7 @@ export default function BarcodeScanner({ onScan, redirectOnScan = true }: Barcod
               <button
                 type="button"
                 onClick={startCamera}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition shadow-sm"
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition shadow-sm"
               >
                 <Camera className="w-3.5 h-3.5" />
                 <span>Start Camera Scanner</span>
@@ -161,7 +161,7 @@ export default function BarcodeScanner({ onScan, redirectOnScan = true }: Barcod
               <button
                 type="button"
                 onClick={stopCamera}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition"
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
               >
                 <span>Turn Off Camera</span>
               </button>
@@ -187,8 +187,8 @@ export default function BarcodeScanner({ onScan, redirectOnScan = true }: Barcod
           {scannedCode ? (
             <div className="relative z-20 flex flex-col items-center space-y-3 bg-slate-900/90 p-6 rounded-2xl border border-emerald-500/50 shadow-2xl animate-in zoom-in-95 duration-200">
               <CheckCircle2 className="w-14 h-14 text-emerald-400" />
-              <div className="text-2xl font-black text-white font-mono tracking-widest">{scannedCode}</div>
-              <div className="text-xs text-emerald-400 font-bold flex items-center gap-1.5">
+              <div className="text-2xl font-medium text-white font-mono tracking-widest">{scannedCode}</div>
+              <div className="text-xs text-emerald-400 font-medium flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 Valid barcode read! Opening roll inspection passport...
               </div>
@@ -196,20 +196,20 @@ export default function BarcodeScanner({ onScan, redirectOnScan = true }: Barcod
           ) : cameraError ? (
             <div className="relative z-20 max-w-md mx-auto text-center space-y-3 p-6 bg-slate-900/95 rounded-2xl border border-amber-500/40">
               <AlertCircle className="w-10 h-10 text-amber-400 mx-auto" />
-              <h4 className="text-sm font-bold text-white">Camera Permission Notice</h4>
+              <h4 className="text-sm font-medium text-white">Camera Permission Notice</h4>
               <p className="text-xs text-slate-300 leading-relaxed">{cameraError}</p>
               <div className="pt-2 flex justify-center gap-3">
                 <button
                   type="button"
                   onClick={startCamera}
-                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold"
+                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium"
                 >
                   Retry Camera
                 </button>
                 <button
                   type="button"
                   onClick={() => setCameraError(null)}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium"
                 >
                   Dismiss
                 </button>
@@ -229,12 +229,12 @@ export default function BarcodeScanner({ onScan, redirectOnScan = true }: Barcod
                 <div className="absolute inset-x-3 h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_12px_#ef4444] animate-bounce" />
 
                 <BarcodeIcon className="w-20 h-20 text-slate-600" />
-                <span className="text-[10px] font-mono tracking-widest text-slate-400 font-bold uppercase">
+                <span className="text-[10px] font-mono tracking-widest text-slate-400 font-medium uppercase">
                   |||||| | |||| ||| |||||||
                 </span>
               </div>
 
-              <span className="text-xs text-blue-300 font-bold bg-slate-900/90 px-4 py-1.5 rounded-full border border-blue-500/30 shadow-sm">
+              <span className="text-xs text-blue-300 font-medium bg-slate-900/90 px-4 py-1.5 rounded-full border border-blue-500/30 shadow-sm">
                 Align 1D fabric roll barcode horizontally across red laser
               </span>
             </div>
@@ -262,7 +262,7 @@ export default function BarcodeScanner({ onScan, redirectOnScan = true }: Barcod
         <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-start space-x-3 animate-in fade-in">
           <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <strong className="block font-bold">Roll Lookup Notice</strong>
+            <strong className="block font-medium">Roll Lookup Notice</strong>
             <span>{searchError}</span>
           </div>
           <button onClick={() => setSearchError(null)} className="text-rose-500 hover:text-rose-800">
@@ -274,7 +274,7 @@ export default function BarcodeScanner({ onScan, redirectOnScan = true }: Barcod
       {/* Manual Roll ID Entry Fallback */}
       <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
         <div>
-          <h2 className="text-sm font-black text-slate-900 flex items-center gap-2">
+          <h2 className="text-sm font-medium text-slate-900 flex items-center gap-2">
             <Search className="w-4 h-4 text-blue-600" />
             Manual Roll-ID Fallback Entry
           </h2>
@@ -290,14 +290,14 @@ export default function BarcodeScanner({ onScan, redirectOnScan = true }: Barcod
               value={manualCode}
               onChange={e => setManualCode(e.target.value.toUpperCase())}
               placeholder="e.g. ROLL-001, ROLL-008, ROLL-009"
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl font-mono text-sm font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 uppercase"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl font-mono text-sm font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 uppercase"
               disabled={isSearching}
             />
           </div>
           <button
             type="submit"
             disabled={!manualCode.trim() || isSearching}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-2xl text-xs font-bold transition flex items-center space-x-2 shrink-0 shadow-md shadow-blue-600/20"
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-2xl text-xs font-medium transition flex items-center space-x-2 shrink-0 shadow-md shadow-blue-600/20"
           >
             {isSearching ? (
               <>
@@ -317,7 +317,7 @@ export default function BarcodeScanner({ onScan, redirectOnScan = true }: Barcod
       {/* 1-Tap Sample Floor Barcode Tags */}
       <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <span className="text-xs font-medium uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
             <Zap className="w-4 h-4 text-amber-500" />
             Active Floor Barcode Tags (1-Tap Simulation)
           </span>
@@ -334,10 +334,10 @@ export default function BarcodeScanner({ onScan, redirectOnScan = true }: Barcod
               className="p-3.5 rounded-2xl bg-slate-50 hover:bg-blue-50/70 border border-slate-200 hover:border-blue-300 text-left transition group shadow-sm flex flex-col justify-between"
             >
               <div className="flex items-center justify-between w-full">
-                <span className="font-mono text-xs font-black text-slate-900 group-hover:text-blue-700">
+                <span className="font-mono text-xs font-medium text-slate-900 group-hover:text-blue-700">
                   {preset.code}
                 </span>
-                <span className="text-[10px] font-bold">
+                <span className="text-[10px] font-medium">
                   {preset.badge}
                 </span>
               </div>
