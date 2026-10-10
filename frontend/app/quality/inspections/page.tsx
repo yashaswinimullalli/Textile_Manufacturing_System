@@ -174,7 +174,7 @@ export default function QualityInspectionsPage() {
             className="px-3.5 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
           >
             <Boxes className="h-3.5 w-3.5 text-teal-600" />
-            <span>Storekeeper Warehouse</span>
+            <span>Inventory Warehouse</span>
           </Link>
 
           <button

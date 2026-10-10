@@ -15,7 +15,7 @@ import {
 const ROLES = [
   {
     id: 'storekeeper',
-    title: 'Storekeeper',
+    title: 'Inventory Manager',
     description: 'Manage yarn inventory, material receipts, and stock availability.',
     icon: Boxes,
     href: '/storekeeper/inventory',

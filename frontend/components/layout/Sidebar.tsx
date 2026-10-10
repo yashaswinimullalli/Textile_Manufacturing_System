@@ -55,7 +55,7 @@ export const Sidebar: React.FC = () => {
           }`}
         >
           <Package className={`h-5 w-5 ${pathname === '/storekeeper' || pathname.startsWith('/storekeeper/inventory') ? 'text-white' : 'text-teal-400'}`} />
-          <span>Storekeeper</span>
+          <span>Inventory Manager</span>
         </Link>
 
         {/* Quality Inspector of Raw Material */}
