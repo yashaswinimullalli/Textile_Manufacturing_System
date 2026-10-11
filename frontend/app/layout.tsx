@@ -7,6 +7,7 @@ export const metadata: Metadata = {
 };
 
 import { FabricTraceProvider } from '@/context/FabricTraceContext';
+import { AuthProvider } from '@/context/AuthContext';
 
 export default function RootLayout({
   children,
@@ -16,14 +17,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-slate-50 flex">
-        <FabricTraceProvider>
-          <Sidebar />
-          <div className="flex-1 flex flex-col min-w-0">
-            <main className="flex-1 p-6 overflow-y-auto">
-              {children}
-            </main>
-          </div>
-        </FabricTraceProvider>
+        <AuthProvider>
+          <FabricTraceProvider>
+            <Sidebar />
+            <div className="flex-1 flex flex-col min-w-0">
+              <main className="flex-1 p-6 overflow-y-auto">
+                {children}
+              </main>
+            </div>
+          </FabricTraceProvider>
+        </AuthProvider>
       </body>
     </html>
   );

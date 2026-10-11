@@ -11,10 +11,13 @@ import {
   Truck,
   ClipboardList,
   Cpu,
+  LogOut,
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   const isLinkActive = (path: string) => {
     if (path === '/' && pathname === '/') return true;
@@ -127,17 +130,20 @@ export const Sidebar: React.FC = () => {
           <span>Quality Inspector</span>
         </Link>
 
-        <Link
-          href="/owner"
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-            isLinkActive('/owner')
-              ? 'bg-teal-600 text-white shadow-md'
-              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <Building2 className={`h-5 w-5 ${isLinkActive('/owner') ? 'text-white' : 'text-amber-400'}`} />
-          <span>Owner / Accounts</span>
-        </Link>
+        {/* Owner Module Link (Visible to Owner, hidden from Employees) */}
+        {user?.category !== 'employee' && (
+          <Link
+            href="/owner"
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+              isLinkActive('/owner')
+                ? 'bg-teal-600 text-white shadow-md'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <Building2 className={`h-5 w-5 ${isLinkActive('/owner') ? 'text-white' : 'text-amber-400'}`} />
+            <span>Owner / Accounts</span>
+          </Link>
+        )}
 
         <Link
           href="/dispatch"
@@ -150,6 +156,36 @@ export const Sidebar: React.FC = () => {
           <Truck className={`h-5 w-5 ${isLinkActive('/dispatch') ? 'text-white' : 'text-indigo-400'}`} />
           <span>Dispatch Hub</span>
         </Link>
+      </div>
+
+      {/* User Session & Logout */}
+      <div className="p-3 border-t border-slate-800 bg-slate-950/40">
+        <div className="flex items-center justify-between gap-2 px-1 py-1">
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-semibold text-slate-200 truncate">
+              {user ? user.name : 'Vastra Operator'}
+            </span>
+            <span className="text-[10px] text-teal-400 font-mono uppercase tracking-wide">
+              {user ? (user.category === 'owner' ? 'Owner Access' : 'Employee Access') : 'Demo Mode'}
+            </span>
+          </div>
+          {user ? (
+            <button
+              onClick={logout}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-300 hover:bg-slate-800 transition"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="text-[11px] font-semibold text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-800 transition"
+            >
+              Sign In
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Plant Info Footer */}
