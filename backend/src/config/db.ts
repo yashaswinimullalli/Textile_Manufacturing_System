@@ -8,7 +8,7 @@ export const pool = new Pool({
   port: parseInt(process.env.DB_PORT || '5432', 10),
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DB_NAME || 'fabrictrace_db',
+  database: process.env.DB_NAME || 'vastra',
   max: 10,
   idleTimeoutMillis: 30000,
 });

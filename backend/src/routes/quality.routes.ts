@@ -1,435 +1,215 @@
 import { Router, Request, Response } from 'express';
 import { pool, withTransaction } from '../config/db.js';
 import { z } from 'zod';
-import {
-  QualityInspection,
-  InspectionDisposition,
-  SpecCheckItem,
-} from '../models/quality.types.js';
 
 export const qualityRouter = Router();
 
-// In-memory fallback inspection store for offline/demo resilience
-export let localInspections: QualityInspection[] = [
-  {
-    id: 'insp-1',
-    batch_id: 'batch-1',
-    batch_code: 'YB-COT-2026-001',
-    barcode: 'FTB-202610-001',
-    supplier: 'Vardhman Textiles Ltd',
-    yarn_type: 'Cotton',
-    colour: 'Bleached White',
-    inspection_number: 1,
-    stage: 'INITIAL',
-    inspector_name: 'Priya Sharma (Lead QC)',
-    inspection_date: '2026-10-01T09:30:00Z',
-    packaging_condition: 'Acceptable',
-    visible_contamination: 'Not observed',
-    colour_consistency: 'Acceptable',
-    yarn_appearance: 'Acceptable',
-    visual_remarks: 'Clean carton packaging, poly-wrapped cones, zero moisture ingress.',
-    defect_description: '',
-    spec_checks: [
-      { id: 'sc-1', test_name: 'Yarn Count / Linear Density', expected_spec: '30s Ne ± 1.5%', actual_value: '30.2s Ne', unit: 'Ne', result: 'Pass', is_mandatory: true },
-      { id: 'sc-2', test_name: 'Single Yarn Tensile Strength', expected_spec: '> 280 cN', actual_value: '298 cN', unit: 'cN', result: 'Pass', is_mandatory: true },
-      { id: 'sc-3', test_name: 'Yarn Evenness (CVm %)', expected_spec: '< 13.5%', actual_value: '11.8%', unit: 'CVm %', result: 'Pass', is_mandatory: true },
-      { id: 'sc-4', test_name: 'Twist per Inch (TPI)', expected_spec: '21.5 ± 1.0', actual_value: '21.8', unit: 'TPI', result: 'Pass', is_mandatory: false },
-    ],
-    supplier_cert_ref: 'COA-VARDH-2026-8812',
-    decision: 'PASSED',
-    quantity_inspected: 2500,
-    quantity_approved: 2500,
-    quantity_held: 0,
-    quantity_rejected: 0,
-    decision_reason: 'All visual and physical laboratory parameters within acceptable ASTM D2256 / ISO 2060 tolerances.',
-    created_at: '2026-10-01T09:30:00Z',
-  },
-  {
-    id: 'insp-2',
-    batch_id: 'batch-2',
-    batch_code: 'YB-POLY-2026-014',
-    barcode: 'FTB-202610-014',
-    supplier: 'Reliance Industries Yarn Div',
-    yarn_type: 'Polyester',
-    colour: 'Navy Blue #19',
-    inspection_number: 1,
-    stage: 'INITIAL',
-    inspector_name: 'Anand Patel (QC Inspector)',
-    inspection_date: '2026-10-03T11:00:00Z',
-    packaging_condition: 'Acceptable',
-    visible_contamination: 'Not observed',
-    colour_consistency: 'Acceptable',
-    yarn_appearance: 'Acceptable',
-    visual_remarks: 'Doff packaging intact, lot stickers match invoice.',
-    defect_description: '',
-    spec_checks: [
-      { id: 'sc-1', test_name: 'Denier / Filament Count', expected_spec: '150D / 48F', actual_value: '149.6D / 48F', unit: 'Denier', result: 'Pass', is_mandatory: true },
-      { id: 'sc-2', test_name: 'Tenacity (g/den)', expected_spec: '> 4.2 g/d', actual_value: '4.6 g/d', unit: 'g/d', result: 'Pass', is_mandatory: true },
-      { id: 'sc-3', test_name: 'Elongation at Break %', expected_spec: '18 - 24%', actual_value: '21.2%', unit: '%', result: 'Pass', is_mandatory: true },
-    ],
-    supplier_cert_ref: 'RIL-COA-NY-0912',
-    decision: 'PASSED',
-    quantity_inspected: 1800,
-    quantity_approved: 1800,
-    quantity_held: 0,
-    quantity_rejected: 0,
-    decision_reason: 'Full conformance to polyester filament specification.',
-    created_at: '2026-10-03T11:00:00Z',
-  },
-  {
-    id: 'insp-3',
-    batch_id: 'batch-3',
-    batch_code: 'YB-BLD-2026-008',
-    barcode: 'FTB-202610-008',
-    supplier: 'Arvind Mills Yarn Hub',
-    yarn_type: 'Blend',
-    colour: 'Charcoal Grey',
-    inspection_number: 1,
-    stage: 'INITIAL',
-    inspector_name: 'Priya Sharma (Lead QC)',
-    inspection_date: '2026-10-05T15:00:00Z',
-    packaging_condition: 'Acceptable',
-    visible_contamination: 'Not observed',
-    colour_consistency: 'Issue found',
-    yarn_appearance: 'Acceptable',
-    visual_remarks: 'Slight shade variation observed across cone layers in pallet 3.',
-    defect_description: 'Delta-E shade variance of 1.4 between top and bottom cones of pallet 3.',
-    spec_checks: [
-      { id: 'sc-1', test_name: 'Yarn Count', expected_spec: '24s Ne Blend', actual_value: '23.8s Ne', unit: 'Ne', result: 'Pass', is_mandatory: true },
-      { id: 'sc-2', test_name: 'Blend Composition Ratio', expected_spec: '65/35 Poly-Cotton ± 2%', actual_value: '64.8/35.2', unit: '%', result: 'Pass', is_mandatory: true },
-      { id: 'sc-3', test_name: 'Spectrophotometer Delta-E', expected_spec: 'Delta-E < 0.8', actual_value: '1.4', unit: 'dE', result: 'Fail', is_mandatory: true, remarks: 'Shade deviation requires dye house review' },
-    ],
-    supplier_cert_ref: 'ARV-BLD-2026-44',
-    decision: 'ON_HOLD',
-    quantity_inspected: 1200,
-    quantity_approved: 0,
-    quantity_held: 1200,
-    quantity_rejected: 0,
-    decision_reason: 'Placed on hold for shade lab confirmation and customer approval before dye lot issue.',
-    created_at: '2026-10-05T15:00:00Z',
-  },
-];
-
-const inspectionSubmissionSchema = z.object({
-  inspector_name: z.string().min(2, 'Inspector name is required'),
-  packaging_condition: z.enum(['Acceptable', 'Damaged']),
-  visible_contamination: z.enum(['Not observed', 'Observed']),
-  colour_consistency: z.enum(['Acceptable', 'Issue found']),
-  yarn_appearance: z.enum(['Acceptable', 'Issue found']),
+const inspectionSchema = z.object({
+  batch_id: z.union([z.number(), z.string()]).optional(),
+  yarn_batch_id: z.union([z.number(), z.string()]).optional(),
+  inspector_name: z.string().optional(),
+  inspector_id: z.union([z.number(), z.string()]).optional(),
+  packaging_condition: z.string().default('Acceptable'),
+  visible_contamination: z.string().optional(),
+  contamination_found: z.boolean().optional(),
+  colour_consistency: z.string().default('Acceptable'),
+  yarn_appearance: z.string().optional(),
+  appearance: z.string().optional(),
   visual_remarks: z.string().optional(),
   defect_description: z.string().optional(),
-  photo_url: z.string().optional(),
-  spec_checks: z.array(
-    z.object({
-      id: z.string(),
-      test_name: z.string(),
-      expected_spec: z.string(),
-      actual_value: z.any().nullable().optional(),
-      unit: z.string(),
-      result: z.enum(['Pass', 'Fail', 'Not Tested']),
-      is_mandatory: z.boolean(),
-      remarks: z.string().optional(),
-    })
-  ),
-  supplier_cert_ref: z.string().optional(),
-  decision: z.enum(['PENDING_INSPECTION', 'ON_HOLD', 'PASSED', 'PARTIALLY_ACCEPTED', 'REJECTED']),
-  quantity_approved: z.number().min(0),
-  quantity_held: z.number().min(0),
-  quantity_rejected: z.number().min(0),
+  defects: z.string().optional(),
+  decision: z.enum(['PENDING_INSPECTION', 'ON_HOLD', 'PASSED', 'PARTIALLY_ACCEPTED', 'REJECTED']).optional(),
+  disposition: z.enum(['PENDING_INSPECTION', 'ON_HOLD', 'PASSED', 'PARTIALLY_ACCEPTED', 'REJECTED']).optional(),
+  quantity_inspected: z.number().optional(),
+  quantity_approved: z.number().min(0).optional(),
+  accepted_quantity: z.number().min(0).optional(),
+  quantity_held: z.number().min(0).default(0),
+  quantity_rejected: z.number().min(0).optional(),
+  rejected_quantity: z.number().min(0).optional(),
   decision_reason: z.string().optional(),
-  reinspection_reason: z.string().optional(),
-  stage: z.enum(['INITIAL', 'REINSPECTION', 'AUDIT']).default('INITIAL'),
+  remarks: z.string().optional(),
+  spec_checks: z.array(z.any()).optional(),
 });
 
-// GET /api/quality-inspections (List all quality inspections)
+function mapInspectionRow(row: any) {
+  return {
+    ...row,
+    id: String(row.id),
+    batch_id: String(row.yarn_batch_id),
+    inspector_name: row.inspector_name || 'Quality Inspector',
+    decision: row.disposition,
+    disposition: row.disposition,
+    quantity_approved: parseFloat(row.accepted_quantity ?? 0),
+    quantity_rejected: parseFloat(row.rejected_quantity ?? 0),
+    accepted_quantity: parseFloat(row.accepted_quantity ?? 0),
+    rejected_quantity: parseFloat(row.rejected_quantity ?? 0),
+    packaging_condition: row.packaging_condition,
+    colour_consistency: row.colour_consistency,
+    yarn_appearance: row.appearance,
+    appearance: row.appearance,
+    visible_contamination: row.contamination_found ? 'Observed' : 'Not observed',
+    contamination_found: Boolean(row.contamination_found),
+    visual_remarks: row.remarks || '',
+    defect_description: row.defects || '',
+    spec_checks: [],
+  };
+}
+
+// GET /api/quality-inspections (List all raw material inspections)
 qualityRouter.get('/', async (req: Request, res: Response) => {
-  const { decision, stage, search } = req.query;
-  try {
-    let query = `
-      SELECT qi.*, yb.batch_code, yb.barcode, yb.supplier, yb.yarn_type, yb.colour, yb.unit
-      FROM quality_inspections qi
-      JOIN yarn_batches yb ON qi.batch_id = yb.id
-      WHERE 1=1
-    `;
-    const params: any[] = [];
-
-    if (decision && decision !== 'ALL') {
-      params.push(decision);
-      query += ` AND qi.decision = $${params.length}`;
-    }
-
-    if (stage && stage !== 'ALL') {
-      params.push(stage);
-      query += ` AND qi.stage = $${params.length}`;
-    }
-
-    if (search && typeof search === 'string' && search.trim()) {
-      params.push(`%${search.trim().toLowerCase()}%`);
-      query += ` AND (LOWER(yb.batch_code) LIKE $${params.length} OR LOWER(yb.barcode) LIKE $${params.length} OR LOWER(qi.inspector_name) LIKE $${params.length} OR LOWER(yb.supplier) LIKE $${params.length})`;
-    }
-
-    query += ' ORDER BY qi.created_at DESC';
-
-    const result = await pool.query(query, params);
-    return res.json({ success: true, data: result.rows });
-  } catch (_err: any) {
-    // In-memory fallback
-    let list = [...localInspections];
-    if (decision && decision !== 'ALL') {
-      list = list.filter((i) => i.decision === decision);
-    }
-    if (stage && stage !== 'ALL') {
-      list = list.filter((i) => i.stage === stage);
-    }
-    if (search && typeof search === 'string' && search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter(
-        (i) =>
-          i.batch_code?.toLowerCase().includes(q) ||
-          i.barcode?.toLowerCase().includes(q) ||
-          i.inspector_name.toLowerCase().includes(q) ||
-          i.supplier?.toLowerCase().includes(q)
-      );
-    }
-    return res.json({ success: true, data: list });
-  }
-});
-
-// GET /api/quality-inspections/batches/pending (Batches awaiting inspection)
-qualityRouter.get('/batches/pending', async (_req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT yb.*
-      FROM yarn_batches yb
-      WHERE yb.inspection_status IN ('PENDING_INSPECTION', 'ON_HOLD')
-      ORDER BY yb.created_at DESC
+      SELECT rmi.*, 
+             yb.batch_code, yb.barcode_id as barcode, yb.supplier_name as supplier,
+             yb.yarn_type, yb.colour, yb.received_quantity, yb.available_quantity,
+             e.name as inspector_name
+      FROM raw_material_inspections rmi
+      JOIN yarn_batches yb ON rmi.yarn_batch_id = yb.id
+      LEFT JOIN employees e ON rmi.inspector_id = e.id
+      ORDER BY rmi.created_at DESC
     `);
-    return res.json({ success: true, data: result.rows });
-  } catch (_err: any) {
-    return res.json({ success: true, data: [] });
+    const data = result.rows.map(mapInspectionRow);
+    return res.json({ success: true, data });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { code: 'DATABASE_ERROR', message: err.message } });
   }
 });
 
-// GET /api/yarn-batches/:id/inspections (Batch inspection history / audit trail)
+// GET /api/quality-inspections/batches/:id/inspections (History for a specific batch)
 qualityRouter.get('/batches/:id/inspections', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = String(req.params.id);
   try {
+    const isNum = /^\d+$/.test(id);
     const result = await pool.query(
-      `SELECT qi.*, yb.batch_code, yb.barcode, yb.supplier, yb.yarn_type, yb.colour
-       FROM quality_inspections qi
-       JOIN yarn_batches yb ON qi.batch_id = yb.id
-       WHERE qi.batch_id = $1
-       ORDER BY qi.inspection_number ASC, qi.created_at ASC`,
+      `SELECT rmi.*, 
+              yb.batch_code, yb.barcode_id as barcode, yb.supplier_name as supplier,
+              yb.yarn_type, yb.colour,
+              e.name as inspector_name
+       FROM raw_material_inspections rmi
+       JOIN yarn_batches yb ON rmi.yarn_batch_id = yb.id
+       LEFT JOIN employees e ON rmi.inspector_id = e.id
+       WHERE ${isNum ? 'rmi.yarn_batch_id = $1 OR' : ''} LOWER(yb.batch_code) = LOWER($1)
+       ORDER BY rmi.created_at ASC`,
       [id]
     );
-    return res.json({ success: true, data: result.rows });
-  } catch (_err: any) {
-    const batchHistory = localInspections
-      .filter((i) => i.batch_id === id)
-      .sort((a, b) => a.inspection_number - b.inspection_number);
-    return res.json({ success: true, data: batchHistory });
+
+    const data = result.rows.map(mapInspectionRow);
+    return res.json({ success: true, data });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { code: 'DATABASE_ERROR', message: err.message } });
   }
 });
 
-// POST /api/yarn-batches/:id/inspections (Record Inspection / Reinspection)
+// POST /api/quality-inspections/batches/:id/inspections
 qualityRouter.post('/batches/:id/inspections', async (req: Request, res: Response) => {
-  const { id: batch_id } = req.params;
-
-  const parsed = inspectionSubmissionSchema.safeParse(req.body);
+  const rawBatchId = String(req.params.id);
+  const parsed = inspectionSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({
       success: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid inspection form data',
-        details: parsed.error.issues,
-      },
+      error: { code: 'VALIDATION_ERROR', details: parsed.error.issues },
     });
   }
 
   const data = parsed.data;
-
-  // RULE 1: Mandatory Specification Checks Validation
-  if (data.decision === 'PASSED') {
-    const failedMandatory = data.spec_checks.find(
-      (c) => c.is_mandatory && (c.result === 'Fail' || c.result === 'Not Tested')
-    );
-    if (failedMandatory) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'MANDATORY_CHECK_INCOMPLETE',
-          message: `Cannot approve batch as PASSED: Mandatory test "${failedMandatory.test_name}" has result "${failedMandatory.result}". Batches with failed or untested mandatory criteria must be placed ON_HOLD or REJECTED.`,
-        },
-      });
-    }
-
-    // Also check critical visual defects
-    if (data.visible_contamination === 'Observed' || data.packaging_condition === 'Damaged') {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'VISUAL_DEFECT_FLAG',
-          message: `Cannot approve batch as PASSED while visible contamination or damaged packaging is recorded. Choose ON_HOLD or PARTIALLY_ACCEPTED with explicit quantity separation.`,
-        },
-      });
-    }
-  }
+  const disposition = data.disposition || data.decision || 'PASSED';
+  const acceptedQty = Number(data.accepted_quantity ?? data.quantity_approved ?? 0);
+  const rejectedQty = Number(data.rejected_quantity ?? data.quantity_rejected ?? 0);
+  const contamination = data.contamination_found ?? (data.visible_contamination === 'Observed');
+  const appearance = data.appearance || data.yarn_appearance || 'NORMAL';
+  const packaging = data.packaging_condition || 'Acceptable';
+  const remarks = data.remarks || data.visual_remarks || data.decision_reason || '';
+  const defects = data.defects || data.defect_description || '';
 
   try {
     const outcome = await withTransaction(async (client) => {
-      // 1. Lock batch row
+      // 1. Resolve batch and lock row
+      const isNum = /^\d+$/.test(rawBatchId);
       const batchRes = await client.query(
-        'SELECT * FROM yarn_batches WHERE id = $1 FOR UPDATE',
-        [batch_id]
+        `SELECT * FROM yarn_batches 
+         WHERE ${isNum ? 'id = $1 OR' : ''} LOWER(batch_code) = LOWER($1) OR LOWER(barcode_id) = LOWER($1)
+         FOR UPDATE`,
+        [rawBatchId]
       );
+
       if (batchRes.rows.length === 0) {
-        throw new Error(`Yarn batch ${batch_id} not found.`);
+        throw new Error(`Yarn batch "${rawBatchId}" not found.`);
       }
 
       const batch = batchRes.rows[0];
-      const totalReceived = parseFloat(batch.quantity_received);
+      const batchId = batch.id;
+      const totalReceived = parseFloat(batch.received_quantity);
 
-      // Verify sum of quantities
-      const totalQuantities = data.quantity_approved + data.quantity_held + data.quantity_rejected;
-      if (Math.abs(totalQuantities - totalReceived) > 0.01) {
-        throw new Error(
-          `Quantities do not balance: Approved (${data.quantity_approved}) + Held (${data.quantity_held}) + Rejected (${data.quantity_rejected}) must equal total batch quantity (${totalReceived}).`
-        );
+      // Validate quantities do not exceed received quantity
+      if (acceptedQty + rejectedQty > totalReceived) {
+        throw new Error(`Inspection total (${acceptedQty + rejectedQty} kg) exceeds batch received quantity (${totalReceived} kg).`);
       }
 
-      // Check existing inspections to compute inspection_number
-      const histRes = await client.query(
-        'SELECT COUNT(*) as count FROM quality_inspections WHERE batch_id = $1',
-        [batch_id]
-      );
-      const inspectionNumber = parseInt(histRes.rows[0].count, 10) + 1;
-      const stage = inspectionNumber > 1 ? 'REINSPECTION' : data.stage;
+      // 2. Resolve inspector ID from employees table (or fallback to first QC inspector)
+      let inspectorId: number | null = null;
+      if (data.inspector_id) {
+        inspectorId = Number(data.inspector_id);
+      } else {
+        const empRes = await client.query(
+          "SELECT id FROM employees WHERE department_id = 2 OR LOWER(role) LIKE '%inspector%' LIMIT 1"
+        );
+        if (empRes.rows.length > 0) inspectorId = Number(empRes.rows[0].id);
+      }
 
-      // 2. Insert quality inspection record
+      // 3. Insert raw_material_inspections record
       const inspRes = await client.query(
-        `INSERT INTO quality_inspections 
-          (batch_id, inspection_number, stage, inspector_name, inspection_date,
-           packaging_condition, visible_contamination, colour_consistency, yarn_appearance,
-           visual_remarks, defect_description, photo_url, spec_checks, supplier_cert_ref,
-           decision, quantity_inspected, quantity_approved, quantity_held, quantity_rejected,
-           decision_reason, reinspection_reason, created_at)
-         VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW())
+        `INSERT INTO raw_material_inspections 
+          (yarn_batch_id, inspector_id, inspection_date, packaging_condition, contamination_found,
+           colour_consistency, appearance, defects, remarks, accepted_quantity, rejected_quantity, disposition, created_at)
+         VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
          RETURNING *`,
         [
-          batch_id,
-          inspectionNumber,
-          stage,
-          data.inspector_name,
-          data.packaging_condition,
-          data.visible_contamination,
-          data.colour_consistency,
-          data.yarn_appearance,
-          data.visual_remarks || '',
-          data.defect_description || '',
-          data.photo_url || null,
-          JSON.stringify(data.spec_checks),
-          data.supplier_cert_ref || null,
-          data.decision,
-          totalReceived,
-          data.quantity_approved,
-          data.quantity_held,
-          data.quantity_rejected,
-          data.decision_reason || '',
-          data.reinspection_reason || null,
+          batchId,
+          inspectorId,
+          packaging,
+          contamination,
+          data.colour_consistency || 'CONSISTENT',
+          appearance,
+          defects,
+          remarks,
+          acceptedQty,
+          rejectedQty,
+          disposition,
         ]
       );
 
-      // 3. Atomically update yarn_batches inventory eligibility
-      // Available to issue is strictly the approved quantity minus already issued quantity
-      const newAvailable = data.quantity_approved;
+      // 4. Update yarn_batches qc_status and available_quantity
+      // Only approved quantities become eligible for production issue!
+      let newAvailableQty = 0;
+      if (disposition === 'PASSED' || disposition === 'PARTIALLY_ACCEPTED') {
+        newAvailableQty = acceptedQty;
+      }
 
-      const updateBatchRes = await client.query(
+      const updatedBatchRes = await client.query(
         `UPDATE yarn_batches 
-         SET inspection_status = $1,
-             quantity_approved = $2,
-             quantity_held = $3,
-             quantity_rejected = $4,
-             quantity_available = $5,
-             updated_at = NOW()
-         WHERE id = $6
+         SET qc_status = $1, available_quantity = $2, updated_at = NOW() 
+         WHERE id = $3 
          RETURNING *`,
-        [
-          data.decision,
-          data.quantity_approved,
-          data.quantity_held,
-          data.quantity_rejected,
-          newAvailable,
-          batch_id,
-        ]
-      );
-
-      // 4. Record stock movement audit trail for inspection release or quarantine
-      const moveRef = `QC ${stage} #${inspectionNumber} [${data.decision}] by ${data.inspector_name}. Approved: ${data.quantity_approved}kg, Held: ${data.quantity_held}kg, Rejected: ${data.quantity_rejected}kg`;
-      await client.query(
-        `INSERT INTO stock_movements (batch_id, movement_type, quantity, reference, created_at)
-         VALUES ($1, 'ADJUSTMENT', $2, $3, NOW())`,
-        [batch_id, data.quantity_approved, moveRef]
+        [disposition, newAvailableQty, batchId]
       );
 
       return {
-        inspection: inspRes.rows[0],
-        batch: updateBatchRes.rows[0],
+        inspection: mapInspectionRow({ ...inspRes.rows[0], batch_code: batch.batch_code }),
+        batch: {
+          ...updatedBatchRes.rows[0],
+          id: String(updatedBatchRes.rows[0].id),
+          quantity_available: parseFloat(updatedBatchRes.rows[0].available_quantity),
+          inspection_status: updatedBatchRes.rows[0].qc_status,
+        },
       };
     });
 
     return res.status(201).json({
       success: true,
       data: outcome,
-      message: `Quality inspection recorded successfully with decision: ${data.decision}. Inventory updated.`,
+      message: `Quality inspection logged for batch: Status set to ${disposition}. Approved stock: ${acceptedQty} kg.`,
     });
   } catch (err: any) {
-    // In-memory fallback handler
-    const inspectionNumber = localInspections.filter((i) => i.batch_id === batch_id).length + 1;
-    const stage = inspectionNumber > 1 ? 'REINSPECTION' : data.stage;
-
-    const newInsp: QualityInspection = {
-      id: `insp-${Date.now()}`,
-      batch_id: String(batch_id),
-      inspection_number: inspectionNumber,
-      stage: stage as any,
-      inspector_name: data.inspector_name,
-      inspection_date: new Date().toISOString(),
-      packaging_condition: data.packaging_condition,
-      visible_contamination: data.visible_contamination,
-      colour_consistency: data.colour_consistency,
-      yarn_appearance: data.yarn_appearance,
-      visual_remarks: data.visual_remarks,
-      defect_description: data.defect_description,
-      photo_url: data.photo_url,
-      spec_checks: data.spec_checks as SpecCheckItem[],
-      supplier_cert_ref: data.supplier_cert_ref,
-      decision: data.decision,
-      quantity_inspected: data.quantity_approved + data.quantity_held + data.quantity_rejected,
-      quantity_approved: data.quantity_approved,
-      quantity_held: data.quantity_held,
-      quantity_rejected: data.quantity_rejected,
-      decision_reason: data.decision_reason,
-      reinspection_reason: data.reinspection_reason,
-      created_at: new Date().toISOString(),
-    };
-
-    localInspections.unshift(newInsp);
-
-    return res.status(201).json({
-      success: true,
-      data: {
-        inspection: newInsp,
-        batch: {
-          id: batch_id,
-          inspection_status: data.decision,
-          quantity_approved: data.quantity_approved,
-          quantity_held: data.quantity_held,
-          quantity_rejected: data.quantity_rejected,
-          quantity_available: data.quantity_approved,
-        },
-      },
-      message: `Quality inspection recorded successfully with decision: ${data.decision}. Inventory updated.`,
-    });
+    return res.status(400).json({ success: false, error: { code: 'QC_ERROR', message: err.message } });
   }
 });

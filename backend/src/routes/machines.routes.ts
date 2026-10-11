@@ -1,232 +1,195 @@
 import { Router, Request, Response } from 'express';
 import { pool, withTransaction } from '../config/db.js';
 import { z } from 'zod';
-import { simulationEngine } from '../services/simulation.service.js';
 
 export const machinesRouter = Router();
 
-// GET /api/machines
+function mapMachineRow(row: any) {
+  // Map DB status to UI status
+  let uiStatus = 'Idle';
+  if (row.status === 'RUNNING') uiStatus = 'Running';
+  else if (row.status === 'STOPPED') uiStatus = 'Stopped';
+  else if (row.status === 'MAINTENANCE') uiStatus = 'Maintenance';
+  else if (row.status === 'BREAKDOWN') uiStatus = 'Breakdown Reported';
+  else if (row.status === 'AVAILABLE') uiStatus = 'Idle';
+
+  return {
+    ...row,
+    id: String(row.id),
+    current_status: uiStatus,
+    db_status: row.status,
+    process_type: row.machine_type || 'Weaving',
+    assigned_operator: row.operator_name || 'Floor Operator',
+    active_order_id: row.active_order_id ? String(row.active_order_id) : null,
+    active_order_no: row.order_number || null,
+    current_shift: 'Morning (06:00 - 14:00)',
+    capacity: parseFloat(row.capacity || 500),
+  };
+}
+
+// GET /api/machines (List machines with active assignment and active order)
 machinesRouter.get('/', async (_req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT m.*, po.order_no as active_order_no
+      SELECT m.*,
+             ma.id as assignment_id, ma.production_order_id as active_order_id,
+             po.order_number, po.fabric_type,
+             e.name as operator_name
       FROM machines m
-      LEFT JOIN production_orders po ON m.active_order_id = po.id
-      ORDER BY m.machine_code ASC
+      LEFT JOIN machine_assignments ma ON m.id = ma.machine_id AND ma.status = 'ACTIVE'
+      LEFT JOIN production_orders po ON ma.production_order_id = po.id
+      LEFT JOIN employees e ON ma.assigned_employee_id = e.id
+      ORDER BY m.id ASC
     `);
-    return res.json({ success: true, data: result.rows });
-  } catch (_err: any) {
-    // When DB is offline, return live simulated machines from simulationEngine
-    const simMachines = simulationEngine.getAllMachinesTelemetry();
-    const mapped = simMachines.map((s) => ({
-      id: s.machine_id,
-      machine_code: s.machine_code,
-      process_type: s.process_type,
-      current_status:
-        s.operating_state === 'RUNNING' || s.operating_state === 'STARTING'
-          ? 'Running'
-          : s.operating_state === 'STOPPED' || s.operating_state === 'EMERGENCY_STOP'
-          ? 'Stopped'
-          : s.operating_state === 'MAINTENANCE'
-          ? 'Maintenance'
-          : s.operating_state === 'BREAKDOWN_REPORTED'
-          ? 'Breakdown Reported'
-          : 'Idle',
-      current_shift: 'Morning (06:00 - 14:00)',
-      assigned_operator: 'Floor Operator',
-      active_order_id: s.active_order_id,
-      active_order_no: s.active_order_no,
-      produced_quantity: s.produced_quantity,
-      last_output_time: s.last_output_persisted_at || new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-      created_at: new Date().toISOString(),
-    }));
-    return res.json({ success: true, data: mapped });
+
+    const data = result.rows.map(mapMachineRow);
+    return res.json({ success: true, data });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { code: 'DATABASE_ERROR', message: err.message } });
   }
 });
 
-// POST /api/machines/:id/assignments
-machinesRouter.post('/:id/assignments', async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { order_id, shift, operator_name } = req.body;
+// GET /api/machines/:id
+machinesRouter.get('/:id', async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  try {
+    const isNum = /^\d+$/.test(id);
+    const result = await pool.query(
+      `SELECT m.*,
+              ma.id as assignment_id, ma.production_order_id as active_order_id,
+              po.order_number, po.fabric_type,
+              e.name as operator_name
+       FROM machines m
+       LEFT JOIN machine_assignments ma ON m.id = ma.machine_id AND ma.status = 'ACTIVE'
+       LEFT JOIN production_orders po ON ma.production_order_id = po.id
+       LEFT JOIN employees e ON ma.assigned_employee_id = e.id
+       WHERE ${isNum ? 'm.id = $1 OR' : ''} LOWER(m.machine_code) = LOWER($1)
+       LIMIT 1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Machine not found' } });
+    }
+
+    return res.json({ success: true, data: mapMachineRow(result.rows[0]) });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { code: 'DATABASE_ERROR', message: err.message } });
+  }
+});
+
+// POST /api/machines/:id/assign (Assign order & operator to machine)
+machinesRouter.post('/:id/assign', async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  const { order_id, employee_id, operator_name } = req.body;
 
   try {
-    const result = await withTransaction(async (client) => {
-      // Update machine
-      const machRes = await client.query(
-        `UPDATE machines 
-         SET active_order_id = $1, current_shift = $2, assigned_operator = $3, current_status = 'Running', updated_at = NOW() 
-         WHERE id = $4 
-         RETURNING *`,
-        [order_id, shift, operator_name || 'Floor Operator', id]
+    const outcome = await withTransaction(async (client) => {
+      // 1. Resolve machine
+      const isNum = /^\d+$/.test(id);
+      const mRes = await client.query(
+        `SELECT id FROM machines WHERE ${isNum ? 'id = $1 OR' : ''} LOWER(machine_code) = LOWER($1) LIMIT 1`,
+        [id]
       );
+      if (mRes.rows.length === 0) throw new Error('Machine not found');
+      const machineId = mRes.rows[0].id;
 
-      // Record assignment
+      // 2. Resolve order
+      const isOrderNum = /^\d+$/.test(String(order_id));
+      const oRes = await client.query(
+        `SELECT id FROM production_orders WHERE ${isOrderNum ? 'id = $1 OR' : ''} LOWER(order_number) = LOWER($1) LIMIT 1`,
+        [String(order_id)]
+      );
+      if (oRes.rows.length === 0) throw new Error('Production order not found');
+      const orderIdNum = oRes.rows[0].id;
+
+      // 3. Close previous active assignments
       await client.query(
-        `INSERT INTO machine_assignments (machine_id, order_id, shift, operator_name, start_time)
-         VALUES ($1, $2, $3, $4, NOW())`,
-        [id, order_id, shift, operator_name || 'Floor Operator']
+        "UPDATE machine_assignments SET status = 'RELEASED', released_at = NOW() WHERE machine_id = $1 AND status = 'ACTIVE'",
+        [machineId]
       );
 
-      return machRes.rows[0];
+      // 4. Create new assignment
+      const assignRes = await client.query(
+        `INSERT INTO machine_assignments (machine_id, production_order_id, assigned_employee_id, assigned_at, status)
+         VALUES ($1, $2, $3, NOW(), 'ACTIVE')
+         RETURNING *`,
+        [machineId, orderIdNum, employee_id ? Number(employee_id) : 1]
+      );
+
+      // 5. Update machine status to RUNNING
+      await client.query("UPDATE machines SET status = 'RUNNING' WHERE id = $1", [machineId]);
+
+      // 6. Record event
+      await client.query(
+        `INSERT INTO machine_events (machine_id, event_type, reason, started_at, remarks, created_at)
+         VALUES ($1, 'RUNNING', 'Assigned to production order', NOW(), $2, NOW())`,
+        [machineId, `Assigned to order #${orderIdNum}`]
+      );
+
+      return assignRes.rows[0];
     });
 
-    return res.json({ success: true, data: result, message: 'Machine assigned successfully.' });
+    return res.status(201).json({ success: true, data: outcome, message: 'Machine assignment confirmed.' });
   } catch (err: any) {
-    return res.status(400).json({ success: false, error: { code: 'ASSIGNMENT_ERROR', message: err.message } });
+    return res.status(400).json({ success: false, error: { code: 'ASSIGN_ERROR', message: err.message } });
   }
 });
 
-// POST /api/orders/:id/production-records
-machinesRouter.post('/orders/:id/production-records', async (req: Request, res: Response) => {
-  const { id: order_id } = req.params;
-  const { machine_id, quantity_produced } = req.body;
-
-  const qty = parseFloat(quantity_produced);
-  if (!qty || qty <= 0) {
-    return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Quantity must be positive' } });
-  }
-
-  try {
-    const result = await withTransaction(async (client) => {
-      // 1. Insert production record
-      const recRes = await client.query(
-        `INSERT INTO production_records (order_id, machine_id, quantity_produced, recorded_at)
-         VALUES ($1, $2, $3, NOW())
-         RETURNING *`,
-        [order_id, machine_id, qty]
-      );
-
-      // 2. Update order produced quantity
-      const orderRes = await client.query(
-        `UPDATE production_orders 
-         SET produced_quantity = produced_quantity + $1, updated_at = NOW() 
-         WHERE id = $2 
-         RETURNING *`,
-        [qty, order_id]
-      );
-
-      // 3. Update machine last output time
-      await client.query(
-        `UPDATE machines 
-         SET last_output_time = NOW(), updated_at = NOW() 
-         WHERE id = $1`,
-        [machine_id]
-      );
-
-      return { record: recRes.rows[0], order: orderRes.rows[0] };
-    });
-
-    return res.status(201).json({ success: true, data: result, message: 'Production output logged.' });
-  } catch (err: any) {
-    return res.status(400).json({ success: false, error: { code: 'RECORD_ERROR', message: err.message } });
-  }
-});
-
-// POST /api/machines/:id/events & /api/machines/:id/simulate-event
+// POST /api/machines/:id/events (Record machine stoppage, breakdown, or maintenance)
 machinesRouter.post('/:id/events', async (req: Request, res: Response) => {
-  return handleEventLogging(req, res, false);
-});
+  const id = String(req.params.id);
+  const { event_type, reason, remarks } = req.body;
 
-machinesRouter.post('/:id/simulate-event', async (req: Request, res: Response) => {
-  return handleEventLogging(req, res, true);
-});
-
-async function handleEventLogging(req: Request, res: Response, isSimulated: boolean) {
-  const { id: machine_id } = req.params;
-  const { event_type, order_id, reason } = req.body;
+  const validTypes = ['RUNNING', 'STOPPED', 'BREAKDOWN', 'MAINTENANCE', 'RESUMED'];
+  const evType = String(event_type || 'STOPPED').toUpperCase();
 
   try {
-    const result = await withTransaction(async (client) => {
-      // Map event_type to machine current_status
-      let newStatus = event_type;
-      if (event_type === 'Resumed') {
-        newStatus = 'Running';
-      }
+    const outcome = await withTransaction(async (client) => {
+      const isNum = /^\d+$/.test(id);
+      const mRes = await client.query(
+        `SELECT id FROM machines WHERE ${isNum ? 'id = $1 OR' : ''} LOWER(machine_code) = LOWER($1) LIMIT 1`,
+        [id]
+      );
+      if (mRes.rows.length === 0) throw new Error('Machine not found');
+      const machineId = mRes.rows[0].id;
 
-      // Update machine status
-      const machRes = await client.query(
-        `UPDATE machines 
-         SET current_status = $1, updated_at = NOW() 
-         WHERE id = $2 
+      // Update machine status accordingly
+      let newMachineStatus = 'STOPPED';
+      if (evType === 'RUNNING' || evType === 'RESUMED') newMachineStatus = 'RUNNING';
+      else if (evType === 'MAINTENANCE') newMachineStatus = 'MAINTENANCE';
+      else if (evType === 'BREAKDOWN') newMachineStatus = 'STOPPED';
+
+      await client.query('UPDATE machines SET status = $1 WHERE id = $2', [newMachineStatus, machineId]);
+
+      // Insert event
+      const evRes = await client.query(
+        `INSERT INTO machine_events (machine_id, event_type, reason, started_at, remarks, created_at)
+         VALUES ($1, $2, $3, NOW(), $4, NOW())
          RETURNING *`,
-        [newStatus, machine_id]
+        [machineId, evType, reason || 'Operator reported event', remarks || '']
       );
 
-      // Insert machine event
-      const eventRes = await client.query(
-        `INSERT INTO machine_events (machine_id, order_id, event_type, event_source, reason, event_time)
-         VALUES ($1, $2, $3, $4, $5, NOW())
-         RETURNING *`,
-        [
-          machine_id,
-          order_id || machRes.rows[0]?.active_order_id || null,
-          event_type,
-          isSimulated ? 'Simulator' : 'Operator Report',
-          reason || (isSimulated ? 'Hackathon Demo Simulator Event' : 'Floor update'),
-        ]
-      );
-
-      // Flag affected order for review if downtime / stoppage event occurred
-      const targetOrderId = order_id || machRes.rows[0]?.active_order_id;
-      let flaggedOrder = null;
-      if (targetOrderId && ['Stopped', 'Breakdown Reported', 'Maintenance'].includes(event_type)) {
-        const flagText = `Machine ${machRes.rows[0]?.machine_code || machine_id} reported ${event_type}: ${reason || 'Downtime detected'}`;
-        const orderRes = await client.query(
-          `UPDATE production_orders 
-           SET is_flagged_for_review = TRUE, flag_reason = $1, updated_at = NOW() 
-           WHERE id = $2 
-           RETURNING *`,
-          [flagText, targetOrderId]
-        );
-        flaggedOrder = orderRes.rows[0];
-      }
-
-      return { machine: machRes.rows[0], event: eventRes.rows[0], flagged_order: flaggedOrder };
+      return evRes.rows[0];
     });
 
-    return res.status(201).json({ success: true, data: result });
+    return res.status(201).json({ success: true, data: outcome, message: `Machine event "${evType}" logged.` });
   } catch (err: any) {
     return res.status(400).json({ success: false, error: { code: 'EVENT_ERROR', message: err.message } });
   }
-}
+});
 
-// GET /api/machines/:id/downtime
-machinesRouter.get('/:id/downtime', async (req: Request, res: Response) => {
-  const { id: machine_id } = req.params;
-
+// GET /api/machines/events/all (List recent machine events)
+machinesRouter.get('/events/all', async (_req: Request, res: Response) => {
   try {
-    const eventsRes = await pool.query(
-      `SELECT * FROM machine_events 
-       WHERE machine_id = $1 
-       ORDER BY event_time ASC`,
-      [machine_id]
-    );
-
-    let totalMinutes = 0;
-    let incidents = 0;
-    let lastStoppedTime: number | null = null;
-
-    for (const e of eventsRes.rows) {
-      const eTime = new Date(e.event_time).getTime();
-      if (['Stopped', 'Breakdown Reported', 'Maintenance'].includes(e.event_type)) {
-        lastStoppedTime = eTime;
-        incidents++;
-      } else if (['Resumed', 'Running'].includes(e.event_type) && lastStoppedTime) {
-        const diff = Math.round((eTime - lastStoppedTime) / (1000 * 60));
-        totalMinutes += Math.max(1, diff);
-        lastStoppedTime = null;
-      }
-    }
-
-    if (lastStoppedTime) {
-      const diff = Math.round((Date.now() - lastStoppedTime) / (1000 * 60));
-      totalMinutes += Math.max(1, diff);
-    }
-
-    return res.json({
-      success: true,
-      data: { total_minutes: totalMinutes, incidents },
-    });
+    const result = await pool.query(`
+      SELECT me.*, m.machine_code, m.machine_name
+      FROM machine_events me
+      JOIN machines m ON me.machine_id = m.id
+      ORDER BY me.started_at DESC
+      LIMIT 50
+    `);
+    return res.json({ success: true, data: result.rows });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: { code: 'DATABASE_ERROR', message: err.message } });
   }

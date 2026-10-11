@@ -16,6 +16,7 @@ import {
   InspectionDisposition,
   SpecCheckItem,
 } from './types';
+import { apiClient } from './axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -497,30 +498,36 @@ let localRecords: ProductionRecord[] = [
 ];
 
 
-// Helper to fetch from backend or fall back gracefully
+// Helper to fetch from backend via Axios or fall back gracefully
 async function fetchWithFallback<T>(endpoint: string, options?: RequestInit, fallbackData?: () => T): Promise<T> {
   try {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options?.headers || {}),
-      },
-    });
-
-    if (res.ok) {
-      const json = await res.json();
-      return json.data !== undefined ? json.data : json;
+    const method = (options?.method || 'GET').toUpperCase();
+    let res;
+    if (method === 'POST') {
+      const data = options?.body ? JSON.parse(options.body as string) : undefined;
+      res = await apiClient.post(endpoint, data);
+    } else if (method === 'PATCH') {
+      const data = options?.body ? JSON.parse(options.body as string) : undefined;
+      res = await apiClient.patch(endpoint, data);
+    } else if (method === 'DELETE') {
+      res = await apiClient.delete(endpoint);
+    } else {
+      res = await apiClient.get(endpoint);
     }
-  } catch {
-    // Backend is not currently reachable or offline; use fallback data
+
+    if (res && res.data) {
+      return res.data.data !== undefined ? res.data.data : res.data;
+    }
+  } catch (err: any) {
+    console.warn(`[Axios API Client] Request to ${endpoint} returned error, falling back:`, err?.message);
   }
 
   if (fallbackData) {
     return fallbackData();
   }
-  throw new Error(`Failed to fetch ${endpoint} and no fallback available.`);
+  throw new Error(`Failed to fetch ${endpoint} via Axios and no fallback available.`);
 }
+
 
 export const api = {
   // STOREKEEPER: YARN INVENTORY
@@ -1496,4 +1503,128 @@ export const api = {
       }
     );
   },
+
+  // FABRIC ROLLS & FINISHED QC
+  async getFabricRolls(filters?: { qc_status?: string; search?: string; dispatch_ready?: boolean }): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (filters?.qc_status && filters.qc_status !== 'ALL') params.append('qc_status', filters.qc_status);
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.dispatch_ready) params.append('dispatch_ready', 'true');
+    const qs = params.toString();
+    return fetchWithFallback(`/fabric-rolls${qs ? `?${qs}` : ''}`, undefined, () => []);
+  },
+
+  async getFabricRoll(id: string): Promise<any> {
+    return fetchWithFallback(`/fabric-rolls/${id}`);
+  },
+
+  async recordFabricInspection(rollId: string, payload: {
+    inspector_id?: number | string;
+    defect_type?: string;
+    defect_count: number;
+    remarks?: string;
+    disposition: 'APPROVED' | 'REJECTED' | 'REINSPECTION';
+  }): Promise<any> {
+    return fetchWithFallback(`/fabric-rolls/${rollId}/inspections`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // DISPATCH HUB
+  async getDispatches(): Promise<any[]> {
+    return fetchWithFallback('/dispatches', undefined, () => []);
+  },
+
+  async validateDispatch(payload: { roll_id?: string; roll_code?: string; quantity?: number }): Promise<any> {
+    return fetchWithFallback('/dispatch/validate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async createDispatch(payload: {
+    roll_id?: string;
+    roll_code?: string;
+    fabric_roll_id?: number | string;
+    vehicle_number: string;
+    destination: string;
+    quantity?: number;
+    unit_price?: number;
+    dispatch_reference?: string;
+  }): Promise<any> {
+    return fetchWithFallback('/dispatches', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // HR & ACCOUNTS & PROFITABILITY
+  async getDepartments(): Promise<any[]> {
+    return fetchWithFallback('/accounts/departments', undefined, () => []);
+  },
+
+  async getEmployees(filters?: { department_id?: number | string; search?: string }): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (filters?.department_id) params.append('department_id', String(filters.department_id));
+    if (filters?.search) params.append('search', filters.search);
+    const qs = params.toString();
+    return fetchWithFallback(`/accounts/employees${qs ? `?${qs}` : ''}`, undefined, () => []);
+  },
+
+  async getAttendance(date?: string): Promise<any[]> {
+    const qs = date ? `?date=${date}` : '';
+    return fetchWithFallback(`/accounts/attendance${qs}`, undefined, () => []);
+  },
+
+  async recordAttendance(payload: {
+    employee_id: number | string;
+    attendance_date?: string;
+    status?: 'PRESENT' | 'ABSENT' | 'HALF_DAY';
+    hours_worked?: number;
+    remarks?: string;
+  }): Promise<any> {
+    return fetchWithFallback('/accounts/attendance', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async getExpenses(filters?: { category?: string; start_date?: string; end_date?: string }): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (filters?.category) params.append('category', filters.category);
+    if (filters?.start_date) params.append('start_date', filters.start_date);
+    if (filters?.end_date) params.append('end_date', filters.end_date);
+    const qs = params.toString();
+    return fetchWithFallback(`/accounts/expenses${qs ? `?${qs}` : ''}`, undefined, () => []);
+  },
+
+  async recordExpense(payload: {
+    category: string;
+    description?: string;
+    amount: number;
+    expense_date?: string;
+    expense_reference?: string;
+  }): Promise<any> {
+    return fetchWithFallback('/accounts/expenses', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async getProfitReport(): Promise<any> {
+    return fetchWithFallback('/accounts/profit-report', undefined, () => ({
+      total_revenue: 0,
+      total_operating_expenses: 0,
+      total_wage_expenses: 0,
+      net_profit: 0,
+      profit_margin: 0,
+      daily_breakdown: { dispatches: [], expenses: [], wages: [] },
+    }));
+  },
+
+  async getStorageLocations(): Promise<any[]> {
+    return fetchWithFallback('/storage-locations', undefined, () => []);
+  },
 };
+

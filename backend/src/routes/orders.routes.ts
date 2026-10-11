@@ -1,21 +1,53 @@
 import { Router, Request, Response } from 'express';
-import { pool } from '../config/db.js';
+import { pool, withTransaction } from '../config/db.js';
 import { z } from 'zod';
-import { simulationEngine } from '../services/simulation.service.js';
 
 export const ordersRouter = Router();
 
 const createOrderSchema = z.object({
-  order_no: z.string().min(2),
-  customer_reference: z.string().min(1),
+  order_number: z.string().min(2).optional(),
+  order_no: z.string().min(2).optional(), // alias
+  customer_name: z.string().min(1).optional(),
+  customer_reference: z.string().min(1).optional(), // alias
   fabric_type: z.string().min(1),
-  target_quantity: z.number().positive(),
-  required_yarn_quantity: z.number().min(0).default(0),
-  due_date: z.string(),
-  status: z.enum(['Planned', 'In Progress', 'On Hold', 'Completed']).default('Planned'),
+  required_quantity: z.number().positive().optional(),
+  target_quantity: z.number().positive().optional(), // alias
+  unit: z.string().default('kg'),
+  due_date: z.string().min(1),
+  start_date: z.string().optional(),
+  priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT', 'Low', 'Normal', 'High', 'Urgent']).default('NORMAL'),
+  status: z.enum(['PENDING', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'Planned', 'In Progress', 'On Hold', 'Completed']).default('PENDING'),
 });
 
-// GET /api/orders
+function mapOrderRow(row: any) {
+  // Normalize status for UI
+  let uiStatus = row.status;
+  if (row.status === 'PENDING') uiStatus = 'Planned';
+  else if (row.status === 'IN_PROGRESS') uiStatus = 'In Progress';
+  else if (row.status === 'ON_HOLD') uiStatus = 'On Hold';
+  else if (row.status === 'COMPLETED') uiStatus = 'Completed';
+
+  return {
+    ...row,
+    id: String(row.id),
+    order_no: row.order_number,
+    order_number: row.order_number,
+    customer_reference: row.customer_name || 'Retail Customer',
+    customer_name: row.customer_name || 'Retail Customer',
+    target_quantity: parseFloat(row.required_quantity ?? 0),
+    required_quantity: parseFloat(row.required_quantity ?? 0),
+    produced_quantity: parseFloat(row.produced_quantity ?? 0),
+    unit: row.unit || 'kg',
+    status: uiStatus,
+    db_status: row.status,
+    priority: row.priority || 'NORMAL',
+    due_date: row.due_date ? String(row.due_date).slice(0, 10) : '',
+    start_date: row.start_date ? String(row.start_date).slice(0, 10) : '',
+    is_flagged_for_review: row.status === 'ON_HOLD',
+  };
+}
+
+// GET /api/orders (List all production orders)
 ordersRouter.get('/', async (req: Request, res: Response) => {
   const { status, search } = req.query;
   try {
@@ -23,96 +55,47 @@ ordersRouter.get('/', async (req: Request, res: Response) => {
     const params: any[] = [];
 
     if (status && status !== 'ALL') {
-      params.push(status);
-      query += ` AND status = $${params.length}`;
+      const s = String(status).toUpperCase().replace(/\s+/g, '_');
+      params.push(s);
+      query += ` AND (UPPER(status) = $${params.length} OR status = $${params.length})`;
     }
 
     if (search && typeof search === 'string' && search.trim()) {
       params.push(`%${search.trim().toLowerCase()}%`);
-      query += ` AND (LOWER(order_no) LIKE $${params.length} OR LOWER(customer_reference) LIKE $${params.length} OR LOWER(fabric_type) LIKE $${params.length})`;
+      query += ` AND (LOWER(order_number) LIKE $${params.length} OR LOWER(customer_name) LIKE $${params.length} OR LOWER(fabric_type) LIKE $${params.length})`;
     }
 
     query += ' ORDER BY created_at DESC';
 
     const result = await pool.query(query, params);
-    return res.json({ success: true, data: result.rows });
-  } catch (_err: any) {
-    const defaultOrders = [
-      {
-        id: 'ord-1',
-        order_no: 'PO-2026-101',
-        customer_reference: 'Zara Global Retail (Summer Twill)',
-        fabric_type: '100% Combed Cotton Twill 180 GSM',
-        target_quantity: 5000,
-        produced_quantity: 3600,
-        required_yarn_quantity: 2200,
-        due_date: '2026-10-18',
-        status: 'In Progress',
-        is_flagged_for_review: false,
-        created_at: '2026-10-02T08:00:00Z',
-      },
-      {
-        id: 'ord-2',
-        order_no: 'PO-2026-102',
-        customer_reference: 'H&M Knitwear Division',
-        fabric_type: 'Poly-Cotton Single Jersey 160 GSM',
-        target_quantity: 3000,
-        produced_quantity: 1200,
-        required_yarn_quantity: 1400,
-        due_date: '2026-10-14',
-        status: 'In Progress',
-        is_flagged_for_review: false,
-        created_at: '2026-10-03T09:30:00Z',
-      },
-      {
-        id: 'ord-3',
-        order_no: 'PO-2026-103',
-        customer_reference: 'Marks & Spencer Workwear',
-        fabric_type: 'Poly Oxford Heavy Duty 240 GSM',
-        target_quantity: 4000,
-        produced_quantity: 0,
-        required_yarn_quantity: 1900,
-        due_date: '2026-10-25',
-        status: 'Planned',
-        is_flagged_for_review: false,
-        created_at: '2026-10-08T11:00:00Z',
-      },
-      {
-        id: 'ord-4',
-        order_no: 'PO-2026-098',
-        customer_reference: 'Decathlon Sportswear',
-        fabric_type: 'Micro Polyester Interlock',
-        target_quantity: 2500,
-        produced_quantity: 2500,
-        required_yarn_quantity: 1100,
-        due_date: '2026-10-09',
-        status: 'Completed',
-        is_flagged_for_review: false,
-        created_at: '2026-09-28T10:00:00Z',
-      },
-    ];
-
-    // Sync with simulation engine: if any simulated machine stopped, flag order, and sync produced meters!
-    const simMachines = simulationEngine.getAllMachinesTelemetry();
-    for (const s of simMachines) {
-      if (s.active_order_id) {
-        const ord = defaultOrders.find((o) => o.id === s.active_order_id);
-        if (ord) {
-          if (s.produced_quantity > ord.produced_quantity) {
-            ord.produced_quantity = s.produced_quantity;
-          }
-          if (['STOPPED', 'EMERGENCY_STOP', 'BREAKDOWN_REPORTED'].includes(s.operating_state)) {
-            ord.is_flagged_for_review = true;
-            (ord as any).flag_reason = `Loom ${s.machine_code} reported ${s.operating_state} in simulation.`;
-          }
-        }
-      }
-    }
-    return res.json({ success: true, data: defaultOrders });
+    const data = result.rows.map(mapOrderRow);
+    return res.json({ success: true, data });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { code: 'DATABASE_ERROR', message: err.message } });
   }
 });
 
-// POST /api/orders
+// GET /api/orders/:id
+ordersRouter.get('/:id', async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  try {
+    const isNum = /^\d+$/.test(id);
+    const result = await pool.query(
+      `SELECT * FROM production_orders WHERE ${isNum ? 'id = $1 OR' : ''} LOWER(order_number) = LOWER($1) LIMIT 1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found' } });
+    }
+
+    return res.json({ success: true, data: mapOrderRow(result.rows[0]) });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { code: 'DATABASE_ERROR', message: err.message } });
+  }
+});
+
+// POST /api/orders (User creates a new production order through UI)
 ordersRouter.post('/', async (req: Request, res: Response) => {
   const parsed = createOrderSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -123,38 +106,61 @@ ordersRouter.post('/', async (req: Request, res: Response) => {
   }
 
   const data = parsed.data;
+  const orderNumber = (data.order_number || data.order_no || `VAS-PO-${Date.now().toString().slice(-6)}`).trim();
+  const customerName = (data.customer_name || data.customer_reference || 'Standard Client').trim();
+  const reqQty = Number(data.required_quantity ?? data.target_quantity ?? 0);
+  const priority = String(data.priority).toUpperCase();
+
+  // Normalize status for vastra
+  let status = 'PENDING';
+  if (data.status === 'In Progress' || data.status === 'IN_PROGRESS') status = 'IN_PROGRESS';
+  else if (data.status === 'Completed' || data.status === 'COMPLETED') status = 'COMPLETED';
+  else if (data.status === 'On Hold' || data.status === 'ON_HOLD') status = 'ON_HOLD';
+
+  if (reqQty <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: { code: 'INVALID_QUANTITY', message: 'Required quantity must be greater than zero.' },
+    });
+  }
+
   try {
     const existing = await pool.query(
-      'SELECT id FROM production_orders WHERE LOWER(order_no) = LOWER($1)',
-      [data.order_no]
+      'SELECT id FROM production_orders WHERE LOWER(order_number) = LOWER($1)',
+      [orderNumber]
     );
     if (existing.rows.length > 0) {
       return res.status(400).json({
         success: false,
-        error: { code: 'DUPLICATE_ORDER', message: `Order number "${data.order_no}" already exists.` },
+        error: { code: 'DUPLICATE_ORDER', message: `Order number "${orderNumber}" already exists.` },
       });
     }
 
+    const startDate = data.start_date ? new Date(data.start_date) : new Date();
+    const dueDate = new Date(data.due_date);
+
     const result = await pool.query(
       `INSERT INTO production_orders 
-        (order_no, customer_reference, fabric_type, target_quantity, required_yarn_quantity, due_date, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+        (order_number, customer_name, fabric_type, required_quantity, produced_quantity, unit, status, priority, start_date, due_date, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, 0, $5, $6, $7, $8, $9, NOW(), NOW())
        RETURNING *`,
       [
-        data.order_no,
-        data.customer_reference,
-        data.fabric_type,
-        data.target_quantity,
-        data.required_yarn_quantity,
-        data.due_date,
-        data.status,
+        orderNumber,
+        customerName,
+        data.fabric_type.trim(),
+        reqQty,
+        data.unit || 'kg',
+        status,
+        priority,
+        startDate,
+        dueDate,
       ]
     );
 
     return res.status(201).json({
       success: true,
-      data: result.rows[0],
-      message: 'Production order created.',
+      data: mapOrderRow(result.rows[0]),
+      message: `Production Order "${orderNumber}" created successfully in PostgreSQL.`,
     });
   } catch (err: any) {
     return res.status(500).json({
@@ -164,28 +170,75 @@ ordersRouter.post('/', async (req: Request, res: Response) => {
   }
 });
 
+// PATCH /api/orders/:id (Update order status or permitted fields)
+ordersRouter.patch('/:id', async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  const { status, priority, due_date, notes } = req.body;
+
+  try {
+    const isNum = /^\d+$/.test(id);
+    let dbStatus = status ? String(status).toUpperCase().replace(/\s+/g, '_') : undefined;
+    if (dbStatus === 'PLANNED') dbStatus = 'PENDING';
+
+    const result = await pool.query(
+      `UPDATE production_orders 
+       SET status = COALESCE($1, status),
+           priority = COALESCE($2, priority),
+           due_date = COALESCE($3, due_date),
+           completed_at = CASE WHEN $1 = 'COMPLETED' THEN NOW() ELSE completed_at END,
+           updated_at = NOW()
+       WHERE ${isNum ? 'id = $4' : 'order_number = $4'}
+       RETURNING *`,
+      [
+        dbStatus || null,
+        priority ? String(priority).toUpperCase() : null,
+        due_date ? new Date(due_date) : null,
+        id,
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found' } });
+    }
+
+    return res.json({
+      success: true,
+      data: mapOrderRow(result.rows[0]),
+      message: 'Production order updated successfully.',
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { code: 'DATABASE_ERROR', message: err.message } });
+  }
+});
+
 // GET /api/orders/:id/material-availability
 ordersRouter.get('/:id/material-availability', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = String(req.params.id);
   try {
-    const orderRes = await pool.query('SELECT * FROM production_orders WHERE id = $1', [id]);
+    const isNum = /^\d+$/.test(id);
+    const orderRes = await pool.query(
+      `SELECT * FROM production_orders WHERE ${isNum ? 'id = $1 OR' : ''} LOWER(order_number) = LOWER($1) LIMIT 1`,
+      [id]
+    );
+
     if (orderRes.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Order not found' },
-      });
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found' } });
     }
 
     const order = orderRes.rows[0];
-    const required = parseFloat(order.required_yarn_quantity || 0);
+    const required = parseFloat(order.required_quantity || 0);
 
-    // Get all available yarn batches that have passed quality inspection
+    // Find all QC-passed yarn batches
     const batchesRes = await pool.query(
-      "SELECT id, batch_code, barcode, yarn_type, colour, quantity_available, inspection_status FROM yarn_batches WHERE quantity_available > 0 AND (inspection_status IS NULL OR inspection_status IN ('PASSED', 'PARTIALLY_ACCEPTED')) ORDER BY received_at ASC"
+      `SELECT yb.*, sl.rack_name 
+       FROM yarn_batches yb
+       LEFT JOIN storage_locations sl ON yb.storage_location_id = sl.id
+       WHERE yb.available_quantity > 0 AND yb.qc_status IN ('PASSED', 'PARTIALLY_ACCEPTED')
+       ORDER BY yb.received_at ASC`
     );
 
     const availableTotal = batchesRes.rows.reduce(
-      (sum, b) => sum + parseFloat(b.quantity_available),
+      (sum, b) => sum + parseFloat(b.available_quantity),
       0
     );
     const shortage = Math.max(0, required - availableTotal);
@@ -193,49 +246,34 @@ ordersRouter.get('/:id/material-availability', async (req: Request, res: Respons
     return res.json({
       success: true,
       data: {
-        order_id: order.id,
-        order_no: order.order_no,
+        order_id: String(order.id),
+        order_no: order.order_number,
         fabric_type: order.fabric_type,
         required_quantity: required,
         available_quantity: availableTotal,
         shortage_quantity: shortage,
         is_sufficient: shortage === 0,
-        unit: 'kg',
-        recommended_batches: batchesRes.rows,
+        unit: order.unit || 'kg',
+        recommended_batches: batchesRes.rows.map((b) => ({
+          id: String(b.id),
+          batch_code: b.batch_code,
+          barcode: b.barcode_id,
+          yarn_type: b.yarn_type,
+          colour: b.colour,
+          quantity_available: parseFloat(b.available_quantity),
+          storage_location: b.rack_name || 'Warehouse',
+        })),
       },
     });
-  } catch (err: any) {
-    return res.status(500).json({
-      success: false,
-      error: { code: 'DATABASE_ERROR', message: err.message },
-    });
-  }
-});
-
-// PATCH /api/orders/:id/clear-flag
-ordersRouter.patch('/:id/clear-flag', async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query(
-      `UPDATE production_orders 
-       SET is_flagged_for_review = FALSE, flag_reason = NULL, updated_at = NOW() 
-       WHERE id = $1 
-       RETURNING *`,
-      [id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found' } });
-    }
-    return res.json({ success: true, data: result.rows[0], message: 'Flag cleared successfully.' });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: { code: 'DATABASE_ERROR', message: err.message } });
   }
 });
 
-// POST /api/orders/:id/production-records
+// POST /api/orders/:id/production-records (Record production meter output)
 ordersRouter.post('/:id/production-records', async (req: Request, res: Response) => {
-  const order_id = req.params.id as string;
-  const { machine_id, quantity_produced } = req.body;
+  const id = String(req.params.id);
+  const { machine_id, employee_id, quantity_produced, remarks } = req.body;
 
   const qty = parseFloat(quantity_produced);
   if (!qty || qty <= 0) {
@@ -243,63 +281,88 @@ ordersRouter.post('/:id/production-records', async (req: Request, res: Response)
   }
 
   try {
-    // 1. Insert production record
-    const recRes = await pool.query(
-      `INSERT INTO production_records (order_id, machine_id, quantity_produced, recorded_at)
-       VALUES ($1, $2, $3, NOW())
-       RETURNING *`,
-      [order_id, machine_id, qty]
-    );
-
-    // 2. Update order produced quantity
-    const orderRes = await pool.query(
-      `UPDATE production_orders 
-       SET produced_quantity = produced_quantity + $1, updated_at = NOW() 
-       WHERE id = $2 
-       RETURNING *`,
-      [qty, order_id]
-    );
-
-    // 3. Update machine last output time and status to Running
-    if (machine_id) {
-      await pool.query(
-        `UPDATE machines 
-         SET last_output_time = NOW(), current_status = 'Running', updated_at = NOW() 
-         WHERE id = $1`,
-        [machine_id]
+    const outcome = await withTransaction(async (client) => {
+      // 1. Resolve order
+      const isNum = /^\d+$/.test(id);
+      const orderRes = await client.query(
+        `SELECT * FROM production_orders WHERE ${isNum ? 'id = $1 OR' : ''} LOWER(order_number) = LOWER($1) FOR UPDATE`,
+        [id]
       );
-    }
+      if (orderRes.rows.length === 0) {
+        throw new Error('Production order not found');
+      }
+      const order = orderRes.rows[0];
+      const newProduced = parseFloat(order.produced_quantity || 0) + qty;
+      const target = parseFloat(order.required_quantity || 0);
+      const newStatus = newProduced >= target ? 'COMPLETED' : 'IN_PROGRESS';
 
-    return res.status(201).json({ success: true, data: { record: recRes.rows[0], order: orderRes.rows[0] }, message: 'Production output logged.' });
-  } catch (_err: any) {
-    // When DB is offline, add to simulationEngine records and sync
-    const simRec = simulationEngine.addSimulatedRecord({
-      order_id,
-      machine_id,
-      quantity_produced: qty,
+      // 2. Insert production record
+      const recRes = await client.query(
+        `INSERT INTO production_records (production_order_id, machine_id, employee_id, quantity_produced, production_date, remarks, created_at)
+         VALUES ($1, $2, $3, $4, NOW(), $5, NOW())
+         RETURNING *`,
+        [
+          order.id,
+          machine_id ? Number(machine_id) : null,
+          employee_id ? Number(employee_id) : null,
+          qty,
+          remarks || `Incremental output logged for ${order.order_number}`,
+        ]
+      );
+
+      // 3. Update order produced quantity
+      const updOrderRes = await client.query(
+        `UPDATE production_orders 
+         SET produced_quantity = $1, 
+             status = CASE WHEN status = 'COMPLETED' THEN status ELSE $2 END,
+             completed_at = CASE WHEN $2 = 'COMPLETED' THEN NOW() ELSE completed_at END,
+             updated_at = NOW()
+         WHERE id = $3
+         RETURNING *`,
+        [newProduced, newStatus, order.id]
+      );
+
+      // 4. Update machine status to RUNNING if machine provided
+      if (machine_id) {
+        await client.query(
+          "UPDATE machines SET status = 'RUNNING' WHERE id = $1",
+          [Number(machine_id)]
+        );
+      }
+
+      return {
+        record: recRes.rows[0],
+        order: mapOrderRow(updOrderRes.rows[0]),
+      };
     });
-    return res.status(201).json({ success: true, data: { record: simRec }, message: 'Production output logged.' });
+
+    return res.status(201).json({
+      success: true,
+      data: outcome,
+      message: `Production output of ${qty} recorded successfully.`,
+    });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, error: { code: 'TRANSACTION_ERROR', message: err.message } });
   }
 });
 
-// GET /api/orders/production-records
-ordersRouter.get('/production-records', async (req: Request, res: Response) => {
+// GET /api/orders/production-records (List production record audit log)
+ordersRouter.get('/production-records/all', async (_req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT pr.*, m.machine_code, po.order_no
+      SELECT pr.*, 
+             po.order_number, po.fabric_type,
+             m.machine_code, m.machine_name,
+             e.name as operator_name
       FROM production_records pr
+      JOIN production_orders po ON pr.production_order_id = po.id
       LEFT JOIN machines m ON pr.machine_id = m.id
-      LEFT JOIN production_orders po ON pr.order_id = po.id
-      ORDER BY pr.recorded_at DESC
-      LIMIT 50
+      LEFT JOIN employees e ON pr.employee_id = e.id
+      ORDER BY pr.production_date DESC
+      LIMIT 100
     `);
     return res.json({ success: true, data: result.rows });
-  } catch (_err: any) {
-    // When DB is offline, return simulated records!
-    return res.json({
-      success: true,
-      data: simulationEngine.getSimulatedRecords(),
-    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { code: 'DATABASE_ERROR', message: err.message } });
   }
 });
-

@@ -5,11 +5,16 @@ import { z } from 'zod';
 export const stockRouter = Router();
 
 const movementSchema = z.object({
-  batch_id: z.string().uuid(),
+  batch_id: z.union([z.number(), z.string()]).optional(),
+  yarn_batch_id: z.union([z.number(), z.string()]).optional(),
   movement_type: z.enum(['RECEIPT', 'ISSUE', 'CONSUMPTION', 'ADJUSTMENT']),
   quantity: z.number().positive('Quantity must be greater than zero'),
-  reference: z.string().optional(),
-  order_id: z.string().uuid().optional(),
+  reference_number: z.string().optional(),
+  reference: z.string().optional(), // alias
+  production_order_id: z.union([z.number(), z.string()]).optional(),
+  order_id: z.union([z.number(), z.string()]).optional(), // alias
+  performed_by: z.union([z.number(), z.string()]).optional(),
+  remarks: z.string().optional(),
 });
 
 // POST /api/stock-movements (Atomic transaction with row-level locking)
@@ -26,27 +31,42 @@ stockRouter.post('/', async (req: Request, res: Response) => {
     });
   }
 
-  const { batch_id, movement_type, quantity, reference, order_id } = parsed.data;
+  const data = parsed.data;
+  const rawBatchId = data.yarn_batch_id ?? data.batch_id;
+  if (!rawBatchId) {
+    return res.status(400).json({
+      success: false,
+      error: { code: 'MISSING_BATCH_ID', message: 'Yarn batch ID is required.' },
+    });
+  }
+
+  const rawOrderId = data.production_order_id ?? data.order_id;
+  const ref = data.reference_number || data.reference || `TXN-${Date.now().toString().slice(-6)}`;
+  const remarks = data.remarks || `Stock ${data.movement_type} recorded`;
 
   try {
     const outcome = await withTransaction(async (client) => {
-      // 1. Row-level lock to prevent concurrent overdrafts
+      // 1. Resolve batch using ID or batch_code and acquire row-level lock
+      const isNumeric = /^\d+$/.test(String(rawBatchId));
       const batchRes = await client.query(
-        'SELECT * FROM yarn_batches WHERE id = $1 FOR UPDATE',
-        [batch_id]
+        `SELECT * FROM yarn_batches 
+         WHERE ${isNumeric ? 'id = $1 OR' : ''} LOWER(batch_code) = LOWER($1) OR LOWER(barcode_id) = LOWER($1)
+         FOR UPDATE`,
+        [String(rawBatchId)]
       );
 
       if (batchRes.rows.length === 0) {
-        throw new Error(`Batch ID ${batch_id} not found.`);
+        throw new Error(`Yarn batch "${rawBatchId}" not found in database.`);
       }
 
       const batch = batchRes.rows[0];
-      const currentAvailable = parseFloat(batch.quantity_available || 0);
-      const qcStatus = batch.inspection_status || 'PENDING_INSPECTION';
+      const batchId = batch.id;
+      const currentAvailable = parseFloat(batch.available_quantity || 0);
+      const qcStatus = batch.qc_status || 'PENDING_INSPECTION';
       let newBalance = currentAvailable;
 
-      // 2. Validate quality inspection clearance before issuing to production
-      if (movement_type === 'ISSUE' || movement_type === 'CONSUMPTION') {
+      // 2. Validate Quality Clearance before allowing production issue
+      if (data.movement_type === 'ISSUE' || data.movement_type === 'CONSUMPTION') {
         if (qcStatus === 'PENDING_INSPECTION') {
           throw new Error(
             `Quality Restriction: Batch ${batch.batch_code} is PENDING_INSPECTION. Yarn must be inspected and approved before it can be issued to production.`
@@ -54,90 +74,123 @@ stockRouter.post('/', async (req: Request, res: Response) => {
         }
         if (qcStatus === 'ON_HOLD') {
           throw new Error(
-            `Quality Quarantine: Batch ${batch.batch_code} is currently ON_HOLD pending quality review or laboratory test confirmation.`
+            `Quality Quarantine: Batch ${batch.batch_code} is currently ON_HOLD pending quality review.`
           );
         }
         if (qcStatus === 'REJECTED') {
           throw new Error(
-            `Quality Rejection: Batch ${batch.batch_code} was REJECTED during incoming inspection and cannot be issued to production.`
+            `Quality Rejection: Batch ${batch.batch_code} was REJECTED during incoming inspection and cannot be issued.`
           );
         }
-        if (quantity > currentAvailable) {
+        if (data.quantity > currentAvailable) {
           throw new Error(
-            `Insufficient approved stock: Cannot issue ${quantity} kg. Only ${currentAvailable} kg approved and available for batch ${batch.batch_code}.`
+            `Insufficient approved stock: Cannot issue ${data.quantity} kg. Only ${currentAvailable} kg available for batch ${batch.batch_code}.`
           );
         }
-        newBalance -= quantity;
-      } else if (movement_type === 'RECEIPT') {
-        newBalance += quantity;
-      } else if (movement_type === 'ADJUSTMENT') {
-        newBalance = quantity; // Absolute adjustment or delta
+        newBalance -= data.quantity;
+      } else if (data.movement_type === 'RECEIPT') {
+        newBalance += data.quantity;
+      } else if (data.movement_type === 'ADJUSTMENT') {
+        newBalance = data.quantity;
       }
 
-      // 3. Atomically update inventory balance
+      // 3. Atomically update yarn_batches balance
       const updateRes = await client.query(
         `UPDATE yarn_batches 
-         SET quantity_available = $1, updated_at = NOW() 
-         WHERE id = $2 
+         SET available_quantity = $1, 
+             received_quantity = CASE WHEN $3 = 'RECEIPT' THEN received_quantity + $2 ELSE received_quantity END,
+             updated_at = NOW() 
+         WHERE id = $4 
          RETURNING *`,
-        [newBalance, batch_id]
+        [newBalance, data.quantity, data.movement_type, batchId]
       );
 
-      // 4. Insert immutable movement audit record
+      // 4. Resolve production order ID if provided
+      let orderIdNum: number | null = null;
+      if (rawOrderId) {
+        const isOrderNum = /^\d+$/.test(String(rawOrderId));
+        const orderRes = await client.query(
+          `SELECT id FROM production_orders WHERE ${isOrderNum ? 'id = $1 OR' : ''} LOWER(order_number) = LOWER($1) LIMIT 1`,
+          [String(rawOrderId)]
+        );
+        if (orderRes.rows.length > 0) {
+          orderIdNum = Number(orderRes.rows[0].id);
+        }
+      }
+
+      // 5. Insert immutable audit movement ledger
       const moveRes = await client.query(
-        `INSERT INTO stock_movements (batch_id, movement_type, quantity, reference, order_id, created_at)
-         VALUES ($1, $2, $3, $4, $5, NOW())
+        `INSERT INTO stock_movements 
+          (yarn_batch_id, movement_type, quantity, reference_number, production_order_id, performed_by, remarks, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
          RETURNING *`,
         [
-          batch_id,
-          movement_type,
-          quantity,
-          reference || `Stock ${movement_type} recorded`,
-          order_id || null,
+          batchId,
+          data.movement_type,
+          data.quantity,
+          ref,
+          orderIdNum,
+          data.performed_by ? Number(data.performed_by) : null,
+          remarks,
         ]
       );
 
       return {
-        batch: updateRes.rows[0],
-        movement: moveRes.rows[0],
+        batch: {
+          ...updateRes.rows[0],
+          id: String(updateRes.rows[0].id),
+          quantity_available: parseFloat(updateRes.rows[0].available_quantity),
+          quantity_received: parseFloat(updateRes.rows[0].received_quantity),
+        },
+        movement: {
+          ...moveRes.rows[0],
+          id: String(moveRes.rows[0].id),
+          batch_id: String(batchId),
+          batch_code: batch.batch_code,
+        },
       };
     });
 
     return res.status(201).json({
       success: true,
       data: outcome,
-      message: `Stock ${movement_type} confirmed and ledger updated.`,
+      message: `Stock ${data.movement_type} of ${data.quantity} kg recorded successfully.`,
     });
   } catch (err: any) {
     return res.status(400).json({
       success: false,
-      error: {
-        code: 'TRANSACTION_ERROR',
-        message: err.message,
-      },
+      error: { code: 'TRANSACTION_ERROR', message: err.message },
     });
   }
 });
 
-// GET /api/stock-movements (Audit history)
+// GET /api/stock-movements (Audit history with batch and order JOINs)
 stockRouter.get('/', async (req: Request, res: Response) => {
   const { batch_id, movement_type, limit } = req.query;
   try {
     let query = `
-      SELECT sm.*, yb.batch_code, yb.barcode, po.order_no
+      SELECT sm.*, 
+             yb.batch_code, yb.barcode_id as barcode, yb.colour, yb.yarn_type,
+             po.order_number as order_no
       FROM stock_movements sm
-      JOIN yarn_batches yb ON sm.batch_id = yb.id
-      LEFT JOIN production_orders po ON sm.order_id = po.id
+      JOIN yarn_batches yb ON sm.yarn_batch_id = yb.id
+      LEFT JOIN production_orders po ON sm.production_order_id = po.id
       WHERE 1=1
     `;
     const params: any[] = [];
 
     if (batch_id) {
-      params.push(batch_id);
-      query += ` AND sm.batch_id = $${params.length}`;
+      const isNum = /^\d+$/.test(String(batch_id));
+      if (isNum) {
+        params.push(Number(batch_id));
+        query += ` AND sm.yarn_batch_id = $${params.length}`;
+      } else {
+        params.push(String(batch_id));
+        query += ` AND LOWER(yb.batch_code) = LOWER($${params.length})`;
+      }
     }
 
-    if (movement_type) {
+    if (movement_type && movement_type !== 'ALL') {
       params.push(movement_type);
       query += ` AND sm.movement_type = $${params.length}`;
     }
@@ -147,10 +200,20 @@ stockRouter.get('/', async (req: Request, res: Response) => {
     if (limit) {
       params.push(parseInt(limit as string, 10));
       query += ` LIMIT $${params.length}`;
+    } else {
+      query += ' LIMIT 100';
     }
 
     const result = await pool.query(query, params);
-    return res.json({ success: true, data: result.rows });
+    const data = result.rows.map((row) => ({
+      ...row,
+      id: String(row.id),
+      batch_id: String(row.yarn_batch_id),
+      quantity: parseFloat(row.quantity),
+      reference: row.reference_number,
+    }));
+
+    return res.json({ success: true, data });
   } catch (err: any) {
     return res.status(500).json({
       success: false,

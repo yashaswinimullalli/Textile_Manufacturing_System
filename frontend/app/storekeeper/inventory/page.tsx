@@ -34,7 +34,7 @@ export default function YarnInventoryPage() {
   const [batches, setBatches] = useState<YarnBatch[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [manualBarcode, setManualBarcode] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [lowStockOnly, setLowStockOnly] = useState(false);
 
@@ -60,24 +60,11 @@ export default function YarnInventoryPage() {
         api.getYarnBatches({
           yarn_type: typeFilter,
           low_stock: lowStockOnly,
-          search: search.trim() || undefined,
         }),
         api.getStockMovements(),
       ]);
       setBatches(batchData);
       setMovements(movementData);
-
-      // Default selected batch to where stock is less
-      if (batchData.length > 0) {
-        setSelectedBatch((prev) => {
-          if (prev) {
-            const matched = batchData.find((b) => b.id === prev.id || b.batch_code === prev.batch_code);
-            if (matched) return matched;
-          }
-          const lowStock = batchData.find((b) => b.quantity_available <= b.reorder_threshold);
-          return lowStock || batchData[0];
-        });
-      }
     } catch (err) {
       console.error('Failed to load storekeeper data', err);
     } finally {
@@ -89,9 +76,49 @@ export default function YarnInventoryPage() {
     loadData();
   }, [typeFilter, lowStockOnly]);
 
+  // Filtered displayed batches: ONLY display when barcode number is manually given
+  const displayedBatches = React.useMemo(() => {
+    const query = manualBarcode.trim().toLowerCase();
+    if (!query) {
+      // Do NOT display batch rows when barcode is not provided
+      return [];
+    }
+
+    return batches.filter((b) => {
+      const matchBarcode = b.barcode?.toLowerCase().includes(query);
+      const matchBatchCode = b.batch_code?.toLowerCase().includes(query);
+      const matchId = String(b.id).toLowerCase() === query;
+      const matchType = typeFilter === 'ALL' || b.yarn_type === typeFilter;
+      const matchLowStock = !lowStockOnly || b.quantity_available <= b.reorder_threshold;
+
+      return (matchBarcode || matchBatchCode || matchId) && matchType && matchLowStock;
+    });
+  }, [batches, manualBarcode, typeFilter, lowStockOnly]);
+
+  // Synchronize selection when barcode is entered or cleared
+  useEffect(() => {
+    if (displayedBatches.length > 0) {
+      setSelectedBatch((prev) => {
+        if (prev && displayedBatches.some((b) => b.id === prev.id)) return prev;
+        return displayedBatches[0];
+      });
+      if (displayedBatches[0].storage_location) {
+        setSelectedRackId(displayedBatches[0].storage_location);
+      }
+    } else if (!manualBarcode.trim()) {
+      setSelectedBatch(null);
+      setSelectedRackId(null);
+    }
+  }, [displayedBatches, manualBarcode]);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loadData();
+    if (displayedBatches.length > 0) {
+      setSelectedBatch(displayedBatches[0]);
+      if (displayedBatches[0].storage_location) {
+        setSelectedRackId(displayedBatches[0].storage_location);
+      }
+    }
   };
 
   // Called after confirmed stock receipt or issue
@@ -114,7 +141,9 @@ export default function YarnInventoryPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-slate-900">Yarn Warehouse</h1>
             <span className="bg-emerald-100 text-emerald-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-              {batches.length} Batches
+              {manualBarcode.trim()
+                ? `${displayedBatches.length} Batch${displayedBatches.length === 1 ? '' : 'es'} Displayed`
+                : 'Enter Barcode to View'}
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
@@ -181,15 +210,21 @@ export default function YarnInventoryPage() {
         selectedBatch={selectedBatch}
         onSelectBatch={(batch) => {
           setSelectedBatch(batch);
-          if (batch?.storage_location) {
-            setSelectedRackId(batch.storage_location);
+          if (batch) {
+            setManualBarcode(batch.barcode);
+            if (batch.storage_location) {
+              setSelectedRackId(batch.storage_location);
+            }
           }
         }}
         selectedRackId={selectedRackId}
         onSelectRack={(rackId) => {
           setSelectedRackId(rackId);
           const matched = batches.find((b) => b.storage_location === rackId);
-          if (matched) setSelectedBatch(matched);
+          if (matched) {
+            setSelectedBatch(matched);
+            setManualBarcode(matched.barcode);
+          }
         }}
         onScanBarcodeClick={() => setIsScannerOpen(true)}
         onReceiveClick={(batch) => setSelectedBatchForAction(batch)}
@@ -214,7 +249,7 @@ export default function YarnInventoryPage() {
           }`}
         >
           <Boxes className="h-4 w-4" />
-          <span>Yarn Batches & Stock ({batches.length})</span>
+          <span>Yarn Batches & Stock ({displayedBatches.length})</span>
         </button>
         <button
           type="button"
@@ -235,22 +270,37 @@ export default function YarnInventoryPage() {
         <div className="space-y-4">
           {/* Filter Toolbar */}
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
-            <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center gap-2 max-w-md">
+            <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center gap-2 max-w-lg">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Scan className="absolute left-3 top-2.5 h-4 w-4 text-teal-600" />
                 <input
                   type="text"
-                  placeholder="Search batch code, barcode, supplier, colour..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  placeholder="Enter Barcode ID manually (e.g. VAS-QR-Y050)..."
+                  value={manualBarcode}
+                  onChange={(e) => setManualBarcode(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 font-mono"
                 />
+                {manualBarcode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setManualBarcode('');
+                      setSelectedBatch(null);
+                      setSelectedRackId(null);
+                    }}
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold p-0.5"
+                    title="Clear barcode"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
               <button
                 type="submit"
-                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-lg transition-colors"
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
               >
-                Search
+                <Search className="h-4 w-4 text-teal-400" />
+                <span>Find Batch</span>
               </button>
             </form>
 
@@ -311,16 +361,71 @@ export default function YarnInventoryPage() {
                         Loading inventory records...
                       </td>
                     </tr>
-                  ) : batches.length === 0 ? (
+                  ) : !manualBarcode.trim() ? (
+                    <tr>
+                      <td colSpan={10} className="py-14 text-center">
+                        <div className="max-w-md mx-auto flex flex-col items-center">
+                          <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 mb-3 shadow-xs">
+                            <Scan className="h-6 w-6" />
+                          </div>
+                          <h3 className="text-sm font-bold text-slate-900">No Barcode Entered</h3>
+                          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                            Yarn batch records are hidden. Please enter a barcode number in the field above or click <span className="font-semibold text-teal-700">Scan Barcode</span> to display batch details.
+                          </p>
+                          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsScannerOpen(true)}
+                              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
+                            >
+                              <Scan className="h-3.5 w-3.5 text-teal-400" />
+                              <span>Scan Barcode</span>
+                            </button>
+                            <span className="text-[11px] text-slate-400">or try e.g. <span className="font-mono font-semibold text-slate-600">VAS-QR-Y050</span></span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : displayedBatches.length === 0 ? (
                     <tr>
                       <td colSpan={10} className="py-12 text-center text-slate-500">
-                        <Boxes className="h-8 w-8 mx-auto text-slate-300 mb-2" />
-                        <p className="font-medium text-slate-700">No yarn batches found</p>
-                        <p className="text-xs text-slate-500 mt-1">Try adjusting your filters or scan a new batch barcode.</p>
+                        <div className="max-w-md mx-auto flex flex-col items-center">
+                          <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-3">
+                            <AlertTriangle className="h-6 w-6" />
+                          </div>
+                          <h3 className="text-sm font-bold text-slate-900">No Yarn Batch Found</h3>
+                          <p className="text-xs text-slate-500 mt-1">
+                            No batch matches barcode <span className="font-mono font-bold text-slate-800">"{manualBarcode}"</span>.
+                          </p>
+                          <div className="mt-4 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUnrecognizedCode(manualBarcode);
+                                setIsRegisterOpen(true);
+                              }}
+                              className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                            >
+                              <PlusCircle className="h-3.5 w-3.5" />
+                              <span>Register New Batch</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setManualBarcode('');
+                                setSelectedBatch(null);
+                                setSelectedRackId(null);
+                              }}
+                              className="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-medium transition-colors"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   ) : (
-                    batches.map((batch) => {
+                    displayedBatches.map((batch) => {
                       const isLow = batch.quantity_available <= batch.reorder_threshold;
                       const qc = batch.inspection_status || 'PENDING_INSPECTION';
                       const isQCPending = qc === 'PENDING_INSPECTION';
@@ -541,6 +646,7 @@ export default function YarnInventoryPage() {
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onBatchFound={(batch) => {
+          setManualBarcode(batch.barcode);
           setSelectedBatch(batch);
           if (batch.storage_location) {
             setSelectedRackId(batch.storage_location);
