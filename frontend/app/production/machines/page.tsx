@@ -30,7 +30,7 @@ import {
   Search,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Machine, ProductionOrder, MachineStatus, ProductionRecord } from '@/lib/types';
+import { Machine, ProductionOrder, MachineStatus, ProductionRecord, MachineTelemetry, SimulationScenario } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { InteractiveMachineFloorScene } from '@/components/machines/InteractiveMachineFloorScene';
 
@@ -38,6 +38,7 @@ export default function MachinesPage() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [records, setRecords] = useState<ProductionRecord[]>([]);
+  const [telemetries, setTelemetries] = useState<MachineTelemetry[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Status Filter Tab
@@ -77,14 +78,18 @@ export default function MachinesPage() {
   const loadData = async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     try {
-      const [machs, ords, recs] = await Promise.all([
+      const [machs, ords, recs, tels] = await Promise.all([
         api.getMachines(),
         api.getOrders(),
         api.getProductionRecords(),
+        api.getAllSimulationMachines().catch(() => [] as MachineTelemetry[]),
       ]);
       setMachines(machs);
       setOrders(ords);
       setRecords(recs);
+      if (tels && tels.length > 0) {
+        setTelemetries(tels);
+      }
       setSelectedMachine((prev) => {
         if (!prev) return null;
         return machs.find((m) => m.id === prev.id) || null;
@@ -262,6 +267,20 @@ export default function MachinesPage() {
     }
   };
 
+  const handleSimulateScenario = async (machineId: string, scenario: SimulationScenario) => {
+    try {
+      await api.triggerSimulationScenario(machineId, scenario);
+      const updatedTelemetries = await api.getAllSimulationMachines().catch(() => []);
+      if (updatedTelemetries.length > 0) {
+        setTelemetries(updatedTelemetries);
+      }
+      loadData(true);
+      setNotification(`Simulated signal: ${scenario.replace('_', ' ')} sent to machine.`);
+    } catch (err: any) {
+      console.error('Failed to trigger simulation scenario', err);
+    }
+  };
+
   // Identify machines that exceed configured interval without output
   const nowMs = Date.now();
   const possibleStoppageMachines = machines.filter((m) => {
@@ -389,6 +408,8 @@ export default function MachinesPage() {
       <InteractiveMachineFloorScene
         machines={machines}
         orders={orders}
+        telemetries={telemetries}
+        onSimulateScenario={handleSimulateScenario}
         selectedMachine={selectedMachine}
         onSelectMachine={setSelectedMachine}
         inactivityInterval={inactivityInterval}

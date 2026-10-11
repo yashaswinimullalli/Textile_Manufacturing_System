@@ -238,17 +238,17 @@ class SimulationEngine {
 
       case 'RUNNING':
         m.motor_state = 'ON';
-        // Fluctuate naturally around rated RPM
-        const rpmNoise = (Math.random() - 0.5) * 4;
+        // Fluctuate naturally around rated RPM with realistic motor flutter
+        const rpmNoise = (Math.random() - 0.5) * 16;
         m.rpm = Math.max(m.config.min_rpm_running, Math.min(m.config.max_rpm, m.config.rated_rpm + rpmNoise));
-        m.power_kw = Number((7.2 + jitter * 0.2).toFixed(2));
-        m.current_amps = Number((16.4 + jitter * 0.4).toFixed(2));
+        m.power_kw = Number((7.2 + jitter * 0.4).toFixed(2));
+        m.current_amps = Number((16.4 + jitter * 0.8).toFixed(2));
 
         // Vibration behavior based on scenario
         if (m.active_scenario === 'VIBRATION_ANOMALY') {
-          m.vibration_rms = Number((6.8 + (Math.random() - 0.5) * 0.8).toFixed(2));
+          m.vibration_rms = Number((6.8 + (Math.random() - 0.5) * 1.2).toFixed(2));
         } else {
-          m.vibration_rms = Number((2.4 + jitter * 0.3).toFixed(2));
+          m.vibration_rms = Number((2.4 + (Math.random() - 0.5) * 0.4).toFixed(2));
         }
 
         // Temperature behavior based on scenario
@@ -259,9 +259,10 @@ class SimulationEngine {
             this.triggerScenario(m.machine_id, 'UNEXPECTED_STOP', 'Thermal overload protection trip (Temperature exceeded critical threshold)');
           }
         } else {
-          // Normal thermal equilibrium around 54°C
-          if (m.motor_temp_c < 54) m.motor_temp_c += 0.2 * speed;
+          // Normal thermal equilibrium with slight dynamic breath
+          if (m.motor_temp_c < 54) m.motor_temp_c += 0.3 * speed;
           if (m.motor_temp_c > 58) m.motor_temp_c -= 0.3 * speed;
+          m.motor_temp_c = Number((m.motor_temp_c + (Math.random() - 0.5) * 0.2).toFixed(1));
         }
         break;
 
@@ -273,9 +274,11 @@ class SimulationEngine {
         m.vibration_rms = Number((0.08 + Math.random() * 0.05).toFixed(2));
         m.power_kw = 0.1;
         m.current_amps = 0.2;
+        // Dynamically accumulate downtime seconds every tick
+        m.total_downtime_seconds += speed;
         // Cool down towards ambient 25°C
         if (m.motor_temp_c > 25.5) {
-          m.motor_temp_c = Math.max(25, m.motor_temp_c - 0.4 * speed);
+          m.motor_temp_c = Math.max(25, Number((m.motor_temp_c - 0.4 * speed).toFixed(1)));
         }
         break;
 
@@ -285,7 +288,7 @@ class SimulationEngine {
         m.vibration_rms = 0.1;
         m.power_kw = 1.2;
         m.current_amps = 3.2;
-        if (m.motor_temp_c > 26) m.motor_temp_c -= 0.3 * speed;
+        if (m.motor_temp_c > 26) m.motor_temp_c = Number((m.motor_temp_c - 0.3 * speed).toFixed(1));
         break;
 
       case 'MAINTENANCE':
@@ -294,20 +297,14 @@ class SimulationEngine {
         m.vibration_rms = 0.05;
         m.power_kw = 0.0;
         m.current_amps = 0.0;
-        if (m.motor_temp_c > 25) m.motor_temp_c -= 0.5 * speed;
+        m.total_downtime_seconds += speed;
+        if (m.motor_temp_c > 25) m.motor_temp_c = Number((m.motor_temp_c - 0.5 * speed).toFixed(1));
         break;
     }
   }
 
   // Section 4: Calculate simulated fabric output from machine signals
   private calculateSimulatedOutput(m: MachineTelemetry, speed: number) {
-    // Requirements:
-    // - Motor must be ON
-    // - State must be RUNNING
-    // - RPM must be within running range
-    // - Emergency stop must be inactive
-    // - Sensor communication must be valid
-    // - Must have an active order not yet completed
     if (
       m.operating_state !== 'RUNNING' ||
       m.motor_state !== 'ON' ||
@@ -328,36 +325,30 @@ class SimulationEngine {
       return;
     }
 
-    // Output Rate formula:
-    // Linear fabric speed (m/sec) = (RPM / (picks_per_cm * 100)) / 60
-    // At 650 RPM and 25 picks/cm: 0.26 m/min = 0.004333 m/sec
+    // Dynamic pacing for real-time demo visibility (smooth fractional meter progression)
     const picksPerMeter = m.config.picks_per_cm * 100;
-    const metersPerSecond = (m.rpm / picksPerMeter) / 60;
+    const metersPerSecond = ((m.rpm / picksPerMeter) / 60) * 12;
     const deltaMeters = metersPerSecond * speed;
 
     m.fractional_meters_buffer += deltaMeters;
+    m.cumulative_counter_meters = Number((m.cumulative_counter_meters + deltaMeters).toFixed(1));
 
-    // Persist full meters or precision units
+    // Persist full meter increments
     const wholeMetersIncrement = Math.floor(m.fractional_meters_buffer);
     if (wholeMetersIncrement >= 1) {
       m.fractional_meters_buffer -= wholeMetersIncrement;
-      m.cumulative_counter_meters += wholeMetersIncrement;
+      const incrementToRecord = wholeMetersIncrement;
+      m.last_processed_counter_meters = Math.floor(m.cumulative_counter_meters);
+      m.produced_quantity += incrementToRecord;
+      m.last_output_persisted_at = new Date().toISOString();
 
-      // Avoid double-counting: only add uncounted increment
-      const incrementToRecord = m.cumulative_counter_meters - m.last_processed_counter_meters;
-      if (incrementToRecord > 0) {
-        m.last_processed_counter_meters = m.cumulative_counter_meters;
-        m.produced_quantity += incrementToRecord;
-        m.last_output_persisted_at = new Date().toISOString();
-
-        // Check target limit
-        if (m.target_quantity > 0 && m.produced_quantity >= m.target_quantity) {
-          m.produced_quantity = m.target_quantity;
-        }
-
-        // Persist to database if available
-        this.persistProductionRecord(m, incrementToRecord);
+      // Check target limit
+      if (m.target_quantity > 0 && m.produced_quantity >= m.target_quantity) {
+        m.produced_quantity = m.target_quantity;
       }
+
+      // Persist to database
+      this.persistProductionRecord(m, incrementToRecord);
     }
   }
 
@@ -662,6 +653,15 @@ class SimulationEngine {
         [m.machine_id, m.active_order_id, eventType, reason]
       );
 
+      // Keep machines table in sync with simulated status
+      if (['Running', 'Stopped', 'Idle', 'Maintenance'].includes(eventType)) {
+        await pool.query(
+          `UPDATE machines SET status = $1, last_output_time = NOW(), updated_at = NOW() 
+           WHERE id = $2 OR machine_code ILIKE $3`,
+          [eventType, m.machine_id, `%${m.machine_code.split(' ')[0]}%`]
+        );
+      }
+
       // If stopped or breakdown, flag order for review
       if (m.active_order_id && ['Stopped', 'Breakdown Reported', 'Maintenance'].includes(eventType)) {
         await pool.query(
@@ -708,6 +708,11 @@ class SimulationEngine {
          SET produced_quantity = produced_quantity + $1, updated_at = NOW() 
          WHERE id = $2`,
         [qty, m.active_order_id]
+      );
+      await pool.query(
+        `UPDATE machines SET last_output_time = NOW(), updated_at = NOW() 
+         WHERE id = $1 OR machine_code ILIKE $2`,
+        [m.machine_id, `%${m.machine_code.split(' ')[0]}%`]
       );
     } catch {
       // Offline fallback: already captured in this.simulatedRecords

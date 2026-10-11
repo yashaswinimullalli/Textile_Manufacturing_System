@@ -29,8 +29,6 @@ import { InspectionModal } from '@/components/quality/InspectionModal';
 import { YarnWarehouseScene } from '@/components/warehouse/YarnWarehouseScene';
 
 export default function YarnInventoryPage() {
-  const [activeTab, setActiveTab] = useState<'inventory' | 'ledger'>('inventory');
-
   const [batches, setBatches] = useState<YarnBatch[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -237,37 +235,8 @@ export default function YarnInventoryPage() {
         }}
       />
 
-      {/* Segment Switcher Tabs: Inventory vs Movement Ledger */}
-      <div className="flex border-b border-slate-200">
-        <button
-          type="button"
-          onClick={() => setActiveTab('inventory')}
-          className={`py-3 px-5 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors ${
-            activeTab === 'inventory'
-              ? 'border-teal-600 text-teal-700 bg-teal-50/50 rounded-t-lg'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Boxes className="h-4 w-4" />
-          <span>Yarn Batches & Stock ({displayedBatches.length})</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('ledger')}
-          className={`py-3 px-5 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors ${
-            activeTab === 'ledger'
-              ? 'border-teal-600 text-teal-700 bg-teal-50/50 rounded-t-lg'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <History className="h-4 w-4" />
-          <span>Stock Movement Ledger ({movements.length})</span>
-        </button>
-      </div>
-
-      {/* TAB 1: YARN INVENTORY TABLE */}
-      {activeTab === 'inventory' && (
-        <div className="space-y-4">
+      {/* YARN INVENTORY TABLE */}
+      <div className="space-y-4">
           {/* Filter Toolbar */}
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
             <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center gap-2 max-w-lg">
@@ -553,93 +522,6 @@ export default function YarnInventoryPage() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* TAB 2: INTEGRATED STOCK MOVEMENTS LEDGER */}
-      {activeTab === 'ledger' && (
-        <div className="space-y-4">
-          <div className="bg-slate-900 text-white rounded-xl p-4 flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-teal-500/20 text-teal-400 rounded-lg">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-teal-400">Append-Only Audit Ledger</p>
-                <p className="text-xs text-slate-300 mt-0.5">
-                  Permanent transaction history for all receipts, issues to work orders, and floor adjustments.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-600">
-                  <tr>
-                    <th className="py-3 px-4">Timestamp</th>
-                    <th className="py-3 px-4">Batch Lot Code</th>
-                    <th className="py-3 px-4">Type</th>
-                    <th className="py-3 px-4 text-right">Quantity</th>
-                    <th className="py-3 px-4">Audit Reference / Order</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-mono text-xs">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={5} className="py-8 text-center text-slate-500 font-sans">
-                        Loading ledger entries...
-                      </td>
-                    </tr>
-                  ) : movements.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-12 text-center text-slate-500 font-sans">
-                        <History className="h-8 w-8 mx-auto text-slate-300 mb-2" />
-                        <p className="font-medium text-slate-700">No stock movements recorded</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    movements.map((mov) => {
-                      const isReceipt = mov.movement_type === 'RECEIPT';
-                      return (
-                        <tr key={mov.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="py-3.5 px-4 text-slate-500 font-sans">
-                            {new Date(mov.created_at).toLocaleString()}
-                          </td>
-                          <td className="py-3.5 px-4 font-bold text-slate-900">
-                            {mov.batch_code || mov.batch_id}
-                          </td>
-                          <td className="py-3.5 px-4 font-sans">
-                            <StatusBadge status={mov.movement_type} size="sm" />
-                          </td>
-                          <td className="py-3.5 px-4 text-right font-bold">
-                            <span
-                              className={`inline-flex items-center gap-1 ${
-                                isReceipt ? 'text-emerald-700' : 'text-blue-700'
-                              }`}
-                            >
-                              {isReceipt ? (
-                                <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-600" />
-                              ) : (
-                                <ArrowUpRight className="h-3.5 w-3.5 text-blue-600" />
-                              )}
-                              {isReceipt ? '+' : '-'}
-                              {mov.quantity.toLocaleString()} kg
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-600 font-sans text-xs">
-                            {mov.reference}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Barcode Scanner Modal */}
       <BarcodeScannerModal

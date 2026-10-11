@@ -102,8 +102,8 @@ export default function MachineEventsPage() {
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Automated Scenario Walkthrough Simulation State
-  const [isAutoSimRunning, setIsAutoSimRunning] = useState<boolean>(false);
+  // Automated Scenario Walkthrough Simulation State (Active and dynamic by default)
+  const [isAutoSimRunning, setIsAutoSimRunning] = useState<boolean>(true);
   const [isAutoSimPaused, setIsAutoSimPaused] = useState<boolean>(false);
   const [currentAutoIndex, setCurrentAutoIndex] = useState<number>(0);
   const [autoStepSecondsLeft, setAutoStepSecondsLeft] = useState<number>(5);
@@ -633,7 +633,7 @@ export default function MachineEventsPage() {
                 </div>
                 <div className="mt-2">
                   <span className="text-base font-bold font-mono text-sky-300">
-                    {Math.round(selectedMachine.cumulative_counter_meters).toLocaleString()}
+                    {Number(selectedMachine.cumulative_counter_meters).toFixed(1)}
                   </span>
                   <p className="text-[10px] text-slate-500 mt-0.5">meters cumulative</p>
                 </div>
@@ -722,7 +722,7 @@ export default function MachineEventsPage() {
               <div>
                 <span className="text-slate-400 font-medium">Downtime & Timestamp Tracking</span>
                 <p className="text-sm font-mono font-bold text-slate-200 mt-1">
-                  Total Downtime: {Math.round(selectedMachine.total_downtime_seconds / 60)} mins
+                  Total Downtime: {Math.floor(selectedMachine.total_downtime_seconds / 60)}m {selectedMachine.total_downtime_seconds % 60}s
                 </p>
                 <p className="text-[11px] text-slate-500 mt-1">
                   Last Output Record:{' '}

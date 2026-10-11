@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Activity,
   CheckCircle2,
@@ -16,8 +17,9 @@ import {
   AlertOctagon,
   Layers,
   ChevronRight,
+  Zap,
 } from 'lucide-react';
-import { Machine, ProductionOrder, MachineStatus } from '@/lib/types';
+import { Machine, ProductionOrder, MachineStatus, MachineTelemetry, SimulationScenario } from '@/lib/types';
 
 interface MachineSlotConfig {
   prefix: string;
@@ -117,6 +119,8 @@ interface InteractiveMachineFloorSceneProps {
   onClearFlagClick: (orderId: string, orderNo?: string) => void;
   searchQuery?: string;
   statusFilter?: string;
+  telemetries?: MachineTelemetry[];
+  onSimulateScenario?: (machineId: string, scenario: SimulationScenario) => void;
 }
 
 export function InteractiveMachineFloorScene({
@@ -134,6 +138,8 @@ export function InteractiveMachineFloorScene({
   onClearFlagClick,
   searchQuery = '',
   statusFilter = 'ALL',
+  telemetries = [],
+  onSimulateScenario,
 }: InteractiveMachineFloorSceneProps) {
   const [hoveredSlotPrefix, setHoveredSlotPrefix] = useState<string | null>(null);
 
@@ -154,6 +160,16 @@ export function InteractiveMachineFloorScene({
       (m) =>
         m.machine_code.toUpperCase().includes(slot.prefix) ||
         m.id.toLowerCase().includes(slot.prefix.toLowerCase())
+    );
+  };
+
+  // Helper to match machine to live simulator telemetry
+  const getTelemetryForMachine = (m: Machine): MachineTelemetry | undefined => {
+    return telemetries?.find(
+      (t) =>
+        t.machine_id === m.id ||
+        t.machine_code.toUpperCase().includes(m.machine_code.split(' ')[0].toUpperCase()) ||
+        m.machine_code.toUpperCase().includes(t.machine_code.split(' ')[0].toUpperCase())
     );
   };
 
@@ -254,6 +270,7 @@ export function InteractiveMachineFloorScene({
           if (!machine) return null;
 
           const effectiveStatus = getEffectiveStatus(machine);
+          const telem = getTelemetryForMachine(machine);
           const isSelected = selectedMachine?.id === machine.id;
           const isHovered = hoveredSlotPrefix === slot.prefix;
           const activeOrder = getActiveOrderForMachine(machine);
@@ -315,6 +332,17 @@ export function InteractiveMachineFloorScene({
                 }`}
                 title={`Click to inspect ${machine.machine_code}`}
               >
+                {/* Dynamic Loom Weaving Indicator on Floor */}
+                {effectiveStatus === 'Running' && (
+                  <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                    <div className="absolute inset-0 bg-emerald-400/10 border-2 border-emerald-400/30 rounded-xl animate-pulse" />
+                    <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-950/85 border border-emerald-500/50 text-emerald-300 text-[9px] font-mono font-bold shadow-md">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      <span>{telem ? Math.round(telem.rpm) : 650} RPM</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Active machine beacon tag on floor */}
                 {isSelected && (
                   <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900/90 border border-teal-400 text-teal-300 text-[10px] font-mono font-bold shadow-lg">
@@ -405,20 +433,25 @@ export function InteractiveMachineFloorScene({
                         <span>Ready for assignment</span>
                         <ChevronRight className="h-2.5 w-2.5 text-slate-400" />
                       </div>
-                    ) : activeOrder && targetQty > 0 ? (
-                      <div className="space-y-0.5">
+                    ) : effectiveStatus === 'Running' ? (
+                      <div className="space-y-1">
                         <div className="flex items-center justify-between text-[9px] font-mono">
-                          <span className="text-slate-600 font-semibold truncate">
-                            {producedQty.toLocaleString()} / {targetQty.toLocaleString()} m
+                          <span className="text-emerald-700 font-bold flex items-center gap-1">
+                            <Activity className="h-2.5 w-2.5 text-emerald-600 animate-pulse" />
+                            <span>{telem ? Math.round(telem.rpm) : 650} RPM</span>
                           </span>
-                          <span className="text-teal-700 font-bold ml-1">{progressPercent}%</span>
+                          <span className="text-teal-700 font-bold">
+                            {telem ? `${Number(telem.cumulative_counter_meters).toFixed(1)}m` : targetQty > 0 ? `${progressPercent}%` : 'Running'}
+                          </span>
                         </div>
-                        <div className="w-full bg-slate-200 rounded-full h-1 overflow-hidden">
-                          <div
-                            className="bg-teal-500 h-1 rounded-full transition-all duration-300"
-                            style={{ width: `${progressPercent}%` }}
-                          />
-                        </div>
+                        {targetQty > 0 && (
+                          <div className="w-full bg-slate-200 rounded-full h-1 overflow-hidden">
+                            <div
+                              className="bg-teal-500 h-1 rounded-full transition-all duration-300"
+                              style={{ width: `${progressPercent}%` }}
+                            />
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="text-[9px] text-slate-400">
@@ -450,6 +483,7 @@ export function InteractiveMachineFloorScene({
               const isDormant = isMachineDormant(selectedMachine);
               const dormantMinutes = getDormantMinutes(selectedMachine);
               const statusStyles = getStatusStyles(effectiveStatus);
+              const telemetry = getTelemetryForMachine(selectedMachine);
 
               return (
                 <div className="space-y-4">
@@ -651,6 +685,125 @@ export function InteractiveMachineFloorScene({
                       )}
                     </div>
                   </div>
+
+                  {/* Dynamic Hardware Telemetry Feed */}
+                  {telemetry && (
+                    <div className="bg-slate-900/90 rounded-lg p-2.5 border border-slate-700/80 space-y-2">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="relative flex h-2 w-2">
+                            {telemetry.operating_state === 'RUNNING' && (
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            )}
+                            <span
+                              className={`relative inline-flex rounded-full h-2 w-2 ${
+                                telemetry.operating_state === 'RUNNING' ? 'bg-emerald-500' : 'bg-slate-500'
+                              }`}
+                            ></span>
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">
+                            Live Telemetry Feed
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono text-teal-400 bg-teal-950/60 px-1.5 py-0.5 rounded border border-teal-800/40">
+                          SIM DYNAMIC
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-slate-800/60 p-2 rounded border border-slate-800">
+                          <div className="text-[10px] text-slate-400">Shaft RPM</div>
+                          <div className="font-mono text-sm font-bold text-teal-300">
+                            {telemetry.rpm.toFixed(0)}{' '}
+                            <span className="text-[10px] text-slate-400 font-normal">RPM</span>
+                          </div>
+                        </div>
+                        <div className="bg-slate-800/60 p-2 rounded border border-slate-800">
+                          <div className="text-[10px] text-slate-400">Vibration</div>
+                          <div
+                            className={`font-mono text-sm font-bold ${
+                              telemetry.vibration_rms > 5 ? 'text-amber-400' : 'text-slate-200'
+                            }`}
+                          >
+                            {telemetry.vibration_rms.toFixed(2)}{' '}
+                            <span className="text-[10px] text-slate-400 font-normal">mm/s</span>
+                          </div>
+                        </div>
+                        <div className="bg-slate-800/60 p-2 rounded border border-slate-800">
+                          <div className="text-[10px] text-slate-400">Motor Temp</div>
+                          <div
+                            className={`font-mono text-sm font-bold ${
+                              telemetry.motor_temp_c > 75 ? 'text-rose-400' : 'text-slate-200'
+                            }`}
+                          >
+                            {telemetry.motor_temp_c.toFixed(1)}{' '}
+                            <span className="text-[10px] text-slate-400 font-normal">°C</span>
+                          </div>
+                        </div>
+                        <div className="bg-slate-800/60 p-2 rounded border border-slate-800">
+                          <div className="text-[10px] text-slate-400">Live Cloth Meter</div>
+                          <div className="font-mono text-sm font-bold text-emerald-400">
+                            {Number(telemetry.cumulative_counter_meters).toFixed(1)}{' '}
+                            <span className="text-[10px] text-slate-400 font-normal">m</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {telemetry.active_warnings && telemetry.active_warnings.length > 0 && (
+                        <div className="p-1.5 rounded bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-300">
+                          ⚠️ {telemetry.active_warnings[0]}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Telemetry Signal Simulator Quick Controls */}
+                  {onSimulateScenario && (
+                    <div className="pt-2 border-t border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Simulator Signal Controls
+                        </span>
+                        <Link
+                          href="/production/machine-events"
+                          className="text-[10px] text-teal-400 hover:text-teal-300 hover:underline flex items-center gap-0.5"
+                        >
+                          <span>Full Simulator</span>
+                          <ChevronRight className="h-2.5 w-2.5" />
+                        </Link>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                        <button
+                          onClick={() => onSimulateScenario(selectedMachine.id, 'NORMAL_PRODUCTION')}
+                          className="px-2 py-1.5 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-700/50 text-emerald-300 rounded font-medium flex items-center justify-center gap-1 transition-all"
+                          title="Simulate normal high-speed production"
+                        >
+                          <span>⚡ Normal Run</span>
+                        </button>
+                        <button
+                          onClick={() => onSimulateScenario(selectedMachine.id, 'VIBRATION_ANOMALY')}
+                          className="px-2 py-1.5 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-700/50 text-amber-300 rounded font-medium flex items-center justify-center gap-1 transition-all"
+                          title="Simulate loom mechanical bearing vibration spike"
+                        >
+                          <span>⚠️ Vibration Spike</span>
+                        </button>
+                        <button
+                          onClick={() => onSimulateScenario(selectedMachine.id, 'OVERHEATING')}
+                          className="px-2 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-700/50 text-rose-300 rounded font-medium flex items-center justify-center gap-1 transition-all"
+                          title="Simulate drive motor thermal overload"
+                        >
+                          <span>🔥 Overheat</span>
+                        </button>
+                        <button
+                          onClick={() => onSimulateScenario(selectedMachine.id, 'UNEXPECTED_STOP')}
+                          className="px-2 py-1.5 bg-red-950/40 hover:bg-red-900/60 border border-red-700/50 text-red-300 rounded font-medium flex items-center justify-center gap-1 transition-all"
+                          title="Simulate warp yarn break emergency trip"
+                        >
+                          <span>🛑 Warp Stop</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
