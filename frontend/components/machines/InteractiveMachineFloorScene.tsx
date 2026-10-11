@@ -751,7 +751,7 @@ export function InteractiveMachineFloorScene({
 
                       {telemetry.active_warnings && telemetry.active_warnings.length > 0 && (
                         <div className="p-1.5 rounded bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-300">
-                          ⚠️ {telemetry.active_warnings[0]}
+                          ⚠️ {typeof telemetry.active_warnings[0] === 'string' ? (telemetry.active_warnings[0] as string) : telemetry.active_warnings[0].message}
                         </div>
                       )}
                     </div>
