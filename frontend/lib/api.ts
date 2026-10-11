@@ -842,6 +842,73 @@ export const api = {
     );
   },
 
+  async bulkCreateOrders(payload: {
+    orders: Array<{
+      order_no: string;
+      customer_reference: string;
+      fabric_type: string;
+      target_quantity: number;
+      required_yarn_quantity?: number;
+      due_date: string;
+      status?: string;
+    }>;
+    replaceDemo?: boolean;
+  }): Promise<{ success: boolean; count: number; message: string }> {
+    return fetchWithFallback(
+      '/orders/bulk',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+      () => {
+        if (payload.replaceDemo) {
+          localOrders = localOrders.filter(
+            (o) => !o.order_no.toLowerCase().startsWith('vas-demo-po0')
+          );
+        }
+        for (const o of payload.orders) {
+          const newOrder: ProductionOrder = {
+            id: `ord-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            order_no: o.order_no,
+            customer_reference: o.customer_reference,
+            fabric_type: o.fabric_type,
+            target_quantity: o.target_quantity,
+            produced_quantity: 0,
+            required_yarn_quantity: o.required_yarn_quantity || Math.round(o.target_quantity * 0.6),
+            due_date: o.due_date,
+            status: 'Planned',
+            created_at: new Date().toISOString(),
+          };
+          localOrders.unshift(newOrder);
+        }
+        return {
+          success: true,
+          count: payload.orders.length,
+          message: `Successfully imported ${payload.orders.length} orders.`,
+        };
+      }
+    );
+  },
+
+  async deleteDemoOrders(): Promise<{ success: boolean; count: number }> {
+    return fetchWithFallback(
+      '/orders/demo',
+      {
+        method: 'DELETE',
+      },
+      () => {
+        const initialCount = localOrders.length;
+        localOrders = localOrders.filter(
+          (o) => !o.order_no.toLowerCase().startsWith('vas-demo-po0')
+        );
+        return {
+          success: true,
+          count: initialCount - localOrders.length,
+        };
+      }
+    );
+  },
+
   async updateOrderStatus(orderId: string, status: 'Planned' | 'In Progress' | 'On Hold' | 'Completed'): Promise<ProductionOrder> {
     return fetchWithFallback(
       `/orders/${orderId}/status`,

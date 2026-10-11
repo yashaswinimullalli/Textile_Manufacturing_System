@@ -105,9 +105,30 @@ export default function ProductionOrdersPage() {
     return 'Unassigned';
   };
 
+  const isDemoOrder = (o: ProductionOrder) =>
+    o.order_no.toUpperCase().startsWith('VAS-DEMO-PO0') ||
+    o.customer_reference.toLowerCase().startsWith('demo customer');
+
+  const realOrders = orders.filter((o) => !isDemoOrder(o));
+  const demoOrders = orders.filter(isDemoOrder);
+  const [hideDemoOrders, setHideDemoOrders] = useState(true);
+
+  const handlePurgeDemoOrders = async () => {
+    if (!confirm(`Are you sure you want to remove ${demoOrders.length} default demo orders from the system?`)) return;
+    try {
+      const res = await api.deleteDemoOrders();
+      setToastMessage(`Cleaned up ${res.count} default demo orders.`);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to remove demo orders.');
+    }
+  };
+
   const flaggedOrders = orders.filter((o) => o.is_flagged_for_review);
 
   const filteredOrders = orders.filter((o) => {
+    // Hide demo orders if hideDemoOrders is true and (real orders exist OR user chose to hide them)
+    if (hideDemoOrders && isDemoOrder(o)) return false;
     if (onlyFlagged && !o.is_flagged_for_review) return false;
     if (statusFilter !== 'ALL' && o.status !== statusFilter) return false;
     if (search.trim()) {
@@ -128,6 +149,11 @@ export default function ProductionOrdersPage() {
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Production Orders</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {realOrders.length > 0
+                ? `${realOrders.length} client order(s) active in plant registry`
+                : `${orders.length} total orders registered`}
+            </p>
           </div>
 
           {/* Section Navigation Tabs */}
@@ -153,7 +179,7 @@ export default function ProductionOrdersPage() {
             className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
           >
             <FileSpreadsheet className="h-4 w-4" />
-            <span>Upload Orders (Excel / CSV)</span>
+            <span>Import Orders (CSV / Excel)</span>
           </button>
 
           <Link
@@ -180,8 +206,6 @@ export default function ProductionOrdersPage() {
         </div>
       )}
 
-
-
       {/* Filter Toolbar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
         <div className="relative flex-1 w-full md:max-w-md">
@@ -195,7 +219,33 @@ export default function ProductionOrdersPage() {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+          {/* Demo Data Management */}
+          {demoOrders.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-lg border border-slate-200 text-xs">
+              <button
+                type="button"
+                onClick={() => setHideDemoOrders(!hideDemoOrders)}
+                className={`px-2.5 py-1 rounded font-semibold transition-colors ${
+                  hideDemoOrders
+                    ? 'bg-white text-slate-700 shadow-xs'
+                    : 'bg-amber-100 text-amber-900'
+                }`}
+                title="Toggle default demo orders"
+              >
+                {hideDemoOrders ? 'Demo Hidden (50)' : 'Demo Shown (50)'}
+              </button>
+              <button
+                type="button"
+                onClick={handlePurgeDemoOrders}
+                className="px-2 py-1 text-rose-700 hover:bg-rose-100 rounded font-semibold transition-colors"
+                title="Delete default demo orders from database"
+              >
+                Clear Demo
+              </button>
+            </div>
+          )}
+
           {/* Flagged Filter Toggle */}
           <button
             type="button"
@@ -207,7 +257,7 @@ export default function ProductionOrdersPage() {
             }`}
           >
             <AlertOctagon className={`h-3.5 w-3.5 ${onlyFlagged ? 'text-amber-600' : 'text-slate-400'}`} />
-            <span>Flagged for Review ({flaggedOrders.length})</span>
+            <span>Flagged ({flaggedOrders.length})</span>
           </button>
 
           <select
@@ -258,12 +308,37 @@ export default function ProductionOrdersPage() {
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-500">
-                    <ClipboardList className="h-8 w-8 mx-auto text-slate-300 mb-2" />
-                    <p className="font-medium text-slate-700">No production orders found</p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {onlyFlagged ? 'No orders currently flagged for downtime review.' : 'Create an order to begin production scheduling.'}
+                  <td colSpan={9} className="py-14 text-center text-slate-500">
+                    <ClipboardList className="h-10 w-10 mx-auto text-slate-300 mb-3" />
+                    <p className="font-bold text-slate-800 text-base">
+                      {hideDemoOrders && demoOrders.length > 0 && realOrders.length === 0
+                        ? 'Default Demo Orders Hidden'
+                        : 'No Production Orders Found'}
                     </p>
+                    <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                      {hideDemoOrders && demoOrders.length > 0 && realOrders.length === 0
+                        ? 'The 50 default demo orders are hidden. Import your client placed orders to reflect them in this dashboard.'
+                        : 'Create an order or upload a spreadsheet manifest to begin production scheduling.'}
+                    </p>
+                    <div className="mt-4 flex items-center justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowUploadModal(true)}
+                        className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-2 shadow-xs"
+                      >
+                        <FileSpreadsheet className="h-4 w-4" />
+                        <span>⚡ Import 200 Production Orders</span>
+                      </button>
+                      {demoOrders.length > 0 && hideDemoOrders && (
+                        <button
+                          type="button"
+                          onClick={() => setHideDemoOrders(false)}
+                          className="px-3.5 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition-colors"
+                        >
+                          Show Demo Orders ({demoOrders.length})
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (

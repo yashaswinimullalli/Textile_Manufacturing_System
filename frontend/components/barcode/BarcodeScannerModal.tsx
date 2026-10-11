@@ -7,6 +7,8 @@ import {
   X,
   AlertCircle,
   PlusCircle,
+  Database,
+  CheckCircle2,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { YarnBatch } from '@/lib/types';
@@ -27,22 +29,37 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   const [barcodeInput, setBarcodeInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [dbBatches, setDbBatches] = useState<YarnBatch[]>([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Auto-focus input when modal opens
+  // Auto-focus input and load existing database barcodes when modal opens
   useEffect(() => {
     if (isOpen) {
       setBarcodeInput('');
       setErrorMessage(null);
+      setLoadingBatches(true);
+
+      api.getYarnBatches()
+        .then((batches) => {
+          const valid = batches.filter((b) => Boolean(b.barcode || b.batch_code));
+          setDbBatches(valid);
+        })
+        .catch((err) => {
+          console.error('Failed to load demo barcodes from database', err);
+        })
+        .finally(() => {
+          setLoadingBatches(false);
+        });
+
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
     }
   }, [isOpen]);
 
-  const handleLookup = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const code = barcodeInput.trim();
+  const executeLookup = async (codeToLookup: string) => {
+    const code = codeToLookup.trim();
     if (!code) {
       setErrorMessage('Please enter a barcode value.');
       return;
@@ -62,11 +79,21 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
     }
   };
 
+  const handleLookup = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    await executeLookup(barcodeInput);
+  };
+
+  const handleSelectDemoBarcode = async (code: string) => {
+    setBarcodeInput(code);
+    await executeLookup(code);
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
-      <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5">
+      <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
@@ -105,6 +132,59 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
               />
             </div>
             <p className="text-[11px] text-slate-400 mt-1">Press Enter or click Lookup Batch to search</p>
+          </div>
+
+          {/* Existing Demo Barcodes from Database */}
+          <div className="pt-1">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5">
+                <Database className="h-3.5 w-3.5 text-teal-600" />
+                Existing Barcodes from Database (Click to Test):
+              </span>
+              {dbBatches.length > 0 && (
+                <span className="text-[10px] text-slate-500 font-mono">
+                  {dbBatches.length} available
+                </span>
+              )}
+            </div>
+
+            {loadingBatches ? (
+              <div className="text-[11px] text-slate-400 italic py-2">
+                Loading barcodes from database...
+              </div>
+            ) : dbBatches.length === 0 ? (
+              <div className="text-[11px] text-slate-400 italic py-1">
+                No yarn batches found in database.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto p-1.5 bg-slate-50 rounded-lg border border-slate-200">
+                {dbBatches.slice(0, 8).map((b) => {
+                  const code = b.barcode || b.batch_code;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      disabled={loading}
+                      onClick={() => handleSelectDemoBarcode(code)}
+                      className="flex items-center justify-between p-2 rounded-md bg-white hover:bg-teal-50/80 border border-slate-200 hover:border-teal-300 text-left transition-colors group shadow-2xs"
+                      title={`Click to lookup ${code}`}
+                    >
+                      <div className="truncate pr-1">
+                        <span className="font-mono text-xs font-bold text-slate-900 group-hover:text-teal-700 block">
+                          {code}
+                        </span>
+                        <span className="text-[10px] text-slate-500 block truncate">
+                          {b.yarn_type} • {b.colour}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-semibold text-teal-700 font-mono bg-teal-50 px-1.5 py-0.5 rounded border border-teal-100 group-hover:bg-teal-600 group-hover:text-white transition-colors shrink-0">
+                        Select →
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">

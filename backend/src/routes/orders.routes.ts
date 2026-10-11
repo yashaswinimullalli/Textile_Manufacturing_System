@@ -95,6 +95,99 @@ ordersRouter.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
+async function purgeDemoOrdersSafely(): Promise<number> {
+  const demoIdsResult = await pool.query(
+    `SELECT id FROM production_orders WHERE order_number LIKE 'VAS-DEMO-%'`
+  );
+  if (demoIdsResult.rows.length === 0) return 0;
+  const demoIds = demoIdsResult.rows.map((r: any) => r.id);
+
+  await pool.query(
+    `DELETE FROM fabric_inspections WHERE fabric_roll_id IN (SELECT id FROM fabric_rolls WHERE production_order_id = ANY($1))`,
+    [demoIds]
+  );
+  await pool.query(
+    `DELETE FROM dispatch_items WHERE fabric_roll_id IN (SELECT id FROM fabric_rolls WHERE production_order_id = ANY($1))`,
+    [demoIds]
+  );
+  await pool.query(`DELETE FROM fabric_rolls WHERE production_order_id = ANY($1)`, [demoIds]);
+  await pool.query(`DELETE FROM stock_movements WHERE production_order_id = ANY($1)`, [demoIds]);
+  await pool.query(`DELETE FROM production_records WHERE production_order_id = ANY($1)`, [demoIds]);
+  await pool.query(`DELETE FROM machine_assignments WHERE production_order_id = ANY($1)`, [demoIds]);
+  const delOrders = await pool.query(`DELETE FROM production_orders WHERE id = ANY($1)`, [demoIds]);
+  return delOrders.rowCount || 0;
+}
+
+// DELETE /api/orders/demo (Remove demo orders and dependent records)
+ordersRouter.delete('/demo', async (req: Request, res: Response) => {
+  try {
+    const count = await purgeDemoOrdersSafely();
+    return res.json({
+      success: true,
+      count,
+      message: `Cleaned up ${count} default demo orders.`,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { message: err.message } });
+  }
+});
+
+// POST /api/orders/bulk (Bulk import production orders)
+ordersRouter.post('/bulk', async (req: Request, res: Response) => {
+  const { orders, replaceDemo } = req.body;
+  if (!Array.isArray(orders) || orders.length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: { message: 'Orders array is required and must not be empty.' },
+    });
+  }
+
+  try {
+    if (replaceDemo) {
+      await purgeDemoOrdersSafely();
+    }
+
+    let inserted = 0;
+    for (const ord of orders) {
+      const orderNumber = String(ord.order_no || ord.order_number || '').trim().toUpperCase();
+      const customerName = String(ord.customer_reference || ord.customer_name || 'Retail Client').trim();
+      const fabricType = String(ord.fabric_type || 'Cotton Fabric').trim();
+      const reqQty = Number(ord.target_quantity ?? ord.required_quantity ?? 0);
+      const unit = ord.unit || 'm';
+      const dueDate = ord.due_date ? new Date(ord.due_date) : new Date(Date.now() + 14 * 86400000);
+      let startDate = ord.start_date ? new Date(ord.start_date) : new Date(dueDate.getTime() - 14 * 86400000);
+      if (isNaN(startDate.getTime()) || startDate > dueDate) {
+        startDate = new Date(dueDate.getTime() - 7 * 86400000);
+      }
+
+      if (!orderNumber || reqQty <= 0) continue;
+
+      await pool.query(
+        `INSERT INTO production_orders 
+          (order_number, customer_name, fabric_type, required_quantity, produced_quantity, unit, status, priority, start_date, due_date, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, 0, $5, 'PENDING', 'NORMAL', $6, $7, NOW(), NOW())
+         ON CONFLICT (order_number) 
+         DO UPDATE SET 
+           customer_name = EXCLUDED.customer_name,
+           fabric_type = EXCLUDED.fabric_type,
+           required_quantity = EXCLUDED.required_quantity,
+           due_date = EXCLUDED.due_date,
+           updated_at = NOW()`,
+        [orderNumber, customerName, fabricType, reqQty, unit, startDate, dueDate]
+      );
+      inserted++;
+    }
+
+    return res.status(201).json({
+      success: true,
+      count: inserted,
+      message: `Successfully imported ${inserted} production orders into system.`,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { message: err.message } });
+  }
+});
+
 // POST /api/orders (User creates a new production order through UI)
 ordersRouter.post('/', async (req: Request, res: Response) => {
   const parsed = createOrderSchema.safeParse(req.body);

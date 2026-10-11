@@ -82,14 +82,25 @@ export default function QualityInspectionsPage() {
     const clean = scanInput.trim();
     if (!clean) return;
 
+    setSearchQuery(clean);
+
     try {
       const found = await api.getBatchByBarcode(clean);
-      setScanInput('');
       setInspectingBatch(found);
       setIsReinspectionMode(Boolean(found.inspection_status && found.inspection_status !== 'PENDING_INSPECTION'));
     } catch (err: any) {
-      setFeedback({ type: 'error', message: err.message || `No batch found for "${clean}".` });
-      setTimeout(() => setFeedback(null), 5000);
+      const local = batches.find(
+        (b) =>
+          b.barcode?.toLowerCase() === clean.toLowerCase() ||
+          b.batch_code?.toLowerCase() === clean.toLowerCase()
+      );
+      if (local) {
+        setInspectingBatch(local);
+        setIsReinspectionMode(Boolean(local.inspection_status && local.inspection_status !== 'PENDING_INSPECTION'));
+      } else {
+        setFeedback({ type: 'error', message: err.message || `No batch found for barcode "${clean}".` });
+        setTimeout(() => setFeedback(null), 5000);
+      }
     }
   };
 
@@ -99,6 +110,9 @@ export default function QualityInspectionsPage() {
     setTimeout(() => setFeedback(null), 6000);
   };
 
+  // Active barcode query: syncs either from top scan bar or search box
+  const activeBarcode = (searchQuery || scanInput).trim().toLowerCase();
+
   // Filtered views
   const pendingBatches = batches.filter(
     (b) => !b.inspection_status || b.inspection_status === 'PENDING_INSPECTION'
@@ -107,21 +121,30 @@ export default function QualityInspectionsPage() {
   const passedBatches = batches.filter((b) => b.inspection_status === 'PASSED');
   const rejectedBatches = batches.filter((b) => b.inspection_status === 'REJECTED');
 
-  const filteredAllBatches = batches.filter((b) => {
-    if (yarnTypeFilter !== 'ALL' && b.yarn_type !== yarnTypeFilter) return false;
-    const status = b.inspection_status || 'PENDING_INSPECTION';
-    if (statusFilter !== 'ALL' && status !== statusFilter) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return (
-        b.batch_code.toLowerCase().includes(q) ||
-        b.barcode.toLowerCase().includes(q) ||
-        b.supplier.toLowerCase().includes(q) ||
-        b.colour.toLowerCase().includes(q)
-      );
+  // ONLY display batch when barcode is given; remove default ones
+  const filteredAllBatches = React.useMemo(() => {
+    if (!activeBarcode) {
+      return [];
     }
-    return true;
-  });
+
+    return batches.filter((b) => {
+      const matchBarcode = b.barcode?.toLowerCase().includes(activeBarcode);
+      const matchBatchCode = b.batch_code?.toLowerCase().includes(activeBarcode);
+      const matchSupplier = b.supplier?.toLowerCase().includes(activeBarcode);
+      const matchColour = b.colour?.toLowerCase().includes(activeBarcode);
+      const matchId = String(b.id).toLowerCase() === activeBarcode;
+
+      if (!(matchBarcode || matchBatchCode || matchSupplier || matchColour || matchId)) {
+        return false;
+      }
+
+      if (yarnTypeFilter !== 'ALL' && b.yarn_type !== yarnTypeFilter) return false;
+      const status = b.inspection_status || 'PENDING_INSPECTION';
+      if (statusFilter !== 'ALL' && status !== statusFilter) return false;
+
+      return true;
+    });
+  }, [batches, activeBarcode, yarnTypeFilter, statusFilter]);
 
   const totalReceivedKg = batches.reduce((sum, b) => sum + b.quantity_received, 0);
   const totalApprovedKg = batches.reduce((sum, b) => sum + (b.quantity_approved || 0), 0);
@@ -140,7 +163,7 @@ export default function QualityInspectionsPage() {
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold text-slate-900">Yarn Inspection</h1>
                 <span className="bg-teal-100 text-teal-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                  Plant QC Workstation
+                  {activeBarcode ? `${filteredAllBatches.length} Lot${filteredAllBatches.length === 1 ? '' : 's'} Matched` : 'Enter Barcode to Inspect'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -216,15 +239,28 @@ export default function QualityInspectionsPage() {
           {/* Filter & Toolbar */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b pb-4">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="relative w-60">
+              <div className="relative w-64">
                 <Search className="h-4 w-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Filter lot ID, barcode, supplier..."
-                  className="pl-9 pr-3 py-1.5 text-xs border rounded-lg w-full focus:ring-1 focus:ring-teal-500"
+                  placeholder="Enter barcode or lot ID..."
+                  className="pl-9 pr-7 py-1.5 text-xs border rounded-lg w-full focus:ring-1 focus:ring-teal-500 font-mono"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setScanInput('');
+                    }}
+                    className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                    title="Clear"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
 
               <select
@@ -232,7 +268,7 @@ export default function QualityInspectionsPage() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="text-xs border rounded-lg px-2.5 py-1.5 bg-white text-slate-700 font-medium"
               >
-                <option value="ALL">All QC Statuses ({batches.length})</option>
+                <option value="ALL">All QC Statuses</option>
                 <option value="PENDING_INSPECTION">Pending Inspection ({pendingBatches.length})</option>
                 <option value="ON_HOLD">On Hold / Quarantine ({onHoldBatches.length})</option>
                 <option value="PASSED">Passed & Released ({passedBatches.length})</option>
@@ -253,7 +289,9 @@ export default function QualityInspectionsPage() {
 
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500 hidden sm:inline">
-                Showing {filteredAllBatches.length} of {batches.length} lots
+                {activeBarcode
+                  ? `Showing ${filteredAllBatches.length} matched lot${filteredAllBatches.length === 1 ? '' : 's'}`
+                  : 'Enter Barcode to View'}
               </span>
 
               {/* View Layout Toggle */}
@@ -299,25 +337,35 @@ export default function QualityInspectionsPage() {
           {/* CARD FORMAT (DEFAULT) */}
           {layoutMode === 'cards' && (
             <div>
-              {filteredAllBatches.length === 0 ? (
+              {!activeBarcode ? (
+                <div className="bg-slate-50/70 rounded-xl border border-dashed border-slate-300 p-12 text-center space-y-3">
+                  <div className="p-3 bg-teal-50 text-teal-700 w-12 h-12 rounded-xl mx-auto flex items-center justify-center">
+                    <Scan className="h-6 w-6" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-800">Scan or Enter Barcode to Inspect Lot</p>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                    Default lots are hidden. Enter or scan a barcode (e.g. <code className="font-mono font-bold text-slate-700">VAS-QR-Y050</code> or <code className="font-mono font-bold text-slate-700">VAS-DEMO-Y001</code>) above to view and inspect its quality report.
+                  </p>
+                </div>
+              ) : filteredAllBatches.length === 0 ? (
                 <div className="bg-slate-50/70 rounded-xl border border-dashed border-slate-300 p-12 text-center space-y-2">
                   <Boxes className="h-8 w-8 text-slate-400 mx-auto" />
-                  <p className="text-sm font-semibold text-slate-700">No yarn batches found</p>
+                  <p className="text-sm font-semibold text-slate-700">No yarn batches matched "{activeBarcode}"</p>
                   <p className="text-xs text-slate-500">
-                    Try adjusting your search query, QC status, or yarn type filters.
+                    Verify the barcode number or enter another lot code.
                   </p>
-                  {(searchQuery || statusFilter !== 'ALL' || yarnTypeFilter !== 'ALL') && (
-                    <button
-                      onClick={() => {
-                        setSearchQuery('');
-                        setStatusFilter('ALL');
-                        setYarnTypeFilter('ALL');
-                      }}
-                      className="mt-2 px-3 py-1 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 shadow-xs"
-                    >
-                      Clear Filters
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setScanInput('');
+                      setStatusFilter('ALL');
+                      setYarnTypeFilter('ALL');
+                    }}
+                    className="mt-2 px-3 py-1 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 shadow-xs"
+                  >
+                    Clear Search
+                  </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -486,7 +534,22 @@ export default function QualityInspectionsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredAllBatches.map((b) => {
+                  {!activeBarcode ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-500">
+                        <Scan className="h-6 w-6 mx-auto mb-2 text-slate-400" />
+                        <p className="font-semibold text-slate-700">Enter a barcode above to display inspection records</p>
+                        <p className="text-xs text-slate-400 mt-1">Default batches are hidden until a barcode is provided.</p>
+                      </td>
+                    </tr>
+                  ) : filteredAllBatches.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-500">
+                        No batch found matching "{activeBarcode}".
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAllBatches.map((b) => {
                     const status = b.inspection_status || 'PENDING_INSPECTION';
                     const isPassed = status === 'PASSED';
                     const isPending = status === 'PENDING_INSPECTION';
@@ -563,7 +626,7 @@ export default function QualityInspectionsPage() {
                         </td>
                       </tr>
                     );
-                  })}
+                  }))}
                 </tbody>
               </table>
             </div>
