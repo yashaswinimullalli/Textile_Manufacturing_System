@@ -19,13 +19,16 @@ const rollInspectionSchema = z.object({
   defect_type: z.string().optional(),
   defect_count: z.number().int().min(0).default(0),
   remarks: z.string().optional(),
-  disposition: z.enum(['APPROVED', 'REJECTED', 'REINSPECTION']),
+  notes: z.string().optional(),
+  decision: z.string().optional(),
+  disposition: z.enum(['APPROVED', 'REJECTED', 'REINSPECTION', 'PASSED', 'REWORK']).optional(),
 });
 
 function mapRollRow(row: any) {
   const totalWeight = parseFloat(row.weight || 0);
   const dispatched = parseFloat(row.dispatched_quantity || 0);
   const availableToDispatch = Math.max(0, totalWeight - dispatched);
+  const isApproved = row.qc_status === 'APPROVED' || row.qc_status === 'PASSED';
 
   return {
     ...row,
@@ -33,12 +36,15 @@ function mapRollRow(row: any) {
     roll_code: row.roll_id,
     roll_id: row.roll_id,
     qr_code: row.qr_code || row.roll_id,
+    fabric_type: row.fabric_type || 'Standard Weave Cotton',
+    customer: row.customer_name || 'Retail Client',
     weight: totalWeight,
+    produced_quantity: totalWeight,
     dispatched_quantity: dispatched,
     available_to_dispatch: availableToDispatch,
-    is_dispatch_eligible: row.qc_status === 'APPROVED' && availableToDispatch > 0,
+    is_dispatch_eligible: isApproved && availableToDispatch > 0,
     qc_status: row.qc_status,
-    operational_status: row.qc_status === 'APPROVED' ? (availableToDispatch === 0 ? 'DISPATCHED' : 'APPROVED_FOR_DISPATCH') : row.qc_status,
+    operational_status: isApproved ? (availableToDispatch === 0 ? 'DISPATCHED' : 'PASSED') : (row.qc_status === 'REJECTED' ? 'REJECTED' : (row.qc_status === 'REINSPECTION' || row.qc_status === 'REWORK' ? 'REWORK' : 'PENDING')),
     order_no: row.order_number || null,
   };
 }
@@ -48,7 +54,7 @@ fabricRouter.get('/', async (req: Request, res: Response) => {
   const { qc_status, search, dispatch_ready } = req.query;
   try {
     let query = `
-      SELECT fr.*, po.order_number, po.fabric_type
+      SELECT fr.*, po.order_number, po.fabric_type, po.customer_name
       FROM fabric_rolls fr
       LEFT JOIN production_orders po ON fr.production_order_id = po.id
       WHERE 1=1
@@ -168,15 +174,30 @@ fabricRouter.post('/:id/inspections', async (req: Request, res: Response) => {
   }
 
   const data = parsed.data;
+  const rawDisp = (data.disposition || data.decision || 'APPROVED').toUpperCase();
+  let disposition: 'APPROVED' | 'REJECTED' | 'REINSPECTION' = 'APPROVED';
+  if (rawDisp === 'REJECTED' || rawDisp === 'REJECT') {
+    disposition = 'REJECTED';
+  } else if (rawDisp === 'REINSPECTION' || rawDisp === 'REWORK' || rawDisp === 'ON_HOLD') {
+    disposition = 'REINSPECTION';
+  } else {
+    disposition = 'APPROVED';
+  }
 
   try {
     const outcome = await withTransaction(async (client) => {
       const isNum = /^\d+$/.test(id);
       const rRes = await client.query(
-        `SELECT * FROM fabric_rolls WHERE ${isNum ? 'id = $1 OR' : ''} LOWER(roll_id) = LOWER($1) FOR UPDATE`,
+        `SELECT * FROM fabric_rolls 
+         WHERE ${isNum ? 'id = $1 OR' : ''} 
+               LOWER(roll_id) = LOWER($1) OR 
+               LOWER(qr_code) = LOWER($1) OR
+               LOWER(REPLACE(roll_id, '-', '')) = LOWER(REPLACE($1, '-', '')) OR
+               LOWER(REPLACE(roll_id, '#', '')) = LOWER(REPLACE($1, '#', ''))
+         FOR UPDATE`,
         [id]
       );
-      if (rRes.rows.length === 0) throw new Error('Fabric roll not found');
+      if (rRes.rows.length === 0) throw new Error(`Fabric roll "${id}" not found`);
       const roll = rRes.rows[0];
 
       // Inspector ID default
@@ -198,8 +219,8 @@ fabricRouter.post('/:id/inspections', async (req: Request, res: Response) => {
           inspectorId,
           data.defect_type || 'General Inspection',
           data.defect_count,
-          data.remarks || 'Fabric Roll Inspection Record',
-          data.disposition,
+          data.remarks || data.notes || 'Fabric Roll Stage Inspection Record',
+          disposition,
         ]
       );
 
@@ -209,7 +230,7 @@ fabricRouter.post('/:id/inspections', async (req: Request, res: Response) => {
          SET qc_status = $1, updated_at = NOW() 
          WHERE id = $2 
          RETURNING *`,
-        [data.disposition, roll.id]
+        [disposition, roll.id]
       );
 
       return {
@@ -221,7 +242,7 @@ fabricRouter.post('/:id/inspections', async (req: Request, res: Response) => {
     return res.status(201).json({
       success: true,
       data: outcome,
-      message: `Fabric roll inspection completed. Status updated to ${data.disposition}.`,
+      message: `Fabric roll inspection completed. Status updated to ${disposition}.`,
     });
   } catch (err: any) {
     return res.status(400).json({ success: false, error: { code: 'INSPECTION_ERROR', message: err.message } });

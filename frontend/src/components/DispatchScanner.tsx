@@ -65,13 +65,12 @@ export default function DispatchScanner() {
 
   const [scannedInput, setScannedInput] = useState("");
   const [scanState, setScanState] = useState<"idle" | "pass" | "reject">("idle");
-  const [loadedPackages, setLoadedPackages] = useState<LoadedPackage[]>([
-    { id: "pkg-1", rollCode: "#1001", fabricType: "100% Combed Cotton", weight: 125, value: 45000 },
-    { id: "pkg-2", rollCode: "#1005", fabricType: "Modal Satin Blend", weight: 95, value: 68000 }
-  ]);
+  const [blockerReason, setBlockerReason] = useState<string>("");
+  const [loadedPackages, setLoadedPackages] = useState<LoadedPackage[]>([]);
   const [currentPassRoll, setCurrentPassRoll] = useState<string | null>(null);
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchSuccess, setDispatchSuccess] = useState(false);
+  const [gatePassRecord, setGatePassRecord] = useState<any>(null);
 
   // Handle Camera scanning
   React.useEffect(() => {
@@ -139,64 +138,55 @@ export default function DispatchScanner() {
     }
   };
 
-  // Scan roll handler
+  // Scan roll handler: Validates strictly against PostgreSQL database
   const handleScan = async (codeToScan?: string) => {
     const raw = (codeToScan || scannedInput).trim().toUpperCase();
     if (!raw) return;
 
-    const cleanNum = raw.replace(/^#/, "").replace(/^ROLL-/, "");
-    const formattedId = `#${cleanNum}`;
-    const formattedCode = `ROLL-${cleanNum}`;
-
-    const foundRoll = fabricRolls.find(
-      r => r.rollId === formattedId || r.roll_code === formattedCode
-    );
-
-    let apiStatus = "UNKNOWN";
     try {
-      const res = await fetch("http://localhost:5000/api/dispatch", {
+      const res = await fetch("http://localhost:5000/api/dispatch/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roll_code: formattedCode })
+        body: JSON.stringify({ roll_code: raw })
       });
-      if (!res.ok) {
-        apiStatus = "BLOCKED";
+      const resJson = await res.json();
+
+      if (res.ok && resJson.success && resJson.data?.can_dispatch) {
+        const rollData = resJson.data;
+        setScanState("pass");
+        setCurrentPassRoll(rollData.roll_id);
+        playSuccessTick();
+
+        const rollWeight = parseFloat(rollData.available_quantity || rollData.total_weight || 500);
+        const newPkg: LoadedPackage = {
+          id: `pkg-${rollData.roll_id}-${Date.now()}`,
+          rollCode: rollData.roll_id,
+          fabricType: rollData.fabric_type || "Cotton Weave",
+          weight: rollWeight,
+          value: Math.round(rollWeight * 120)
+        };
+
+        setLoadedPackages((prev) => {
+          if (prev.some((p) => p.rollCode === rollData.roll_id)) return prev;
+          return [newPkg, ...prev];
+        });
+        setScannedInput("");
+
+        setTimeout(() => {
+          setScanState("idle");
+        }, 2500);
+
       } else {
-        apiStatus = "PASS";
+        const reason =
+          resJson.data?.blocker_reason ||
+          resJson.blocker_reason ||
+          resJson.error?.message ||
+          `Safety Gate Block: Roll ${raw} has not been approved in Quality Inspection.`;
+        setBlockerReason(reason);
+        setScanState("reject");
       }
-    } catch (e) {
-      // If server unreachable, use global state
-    }
-
-    const isPass = 
-      (foundRoll && foundRoll.status === "PASSED") ||
-      apiStatus === "PASS";
-
-    const isReject = 
-      (foundRoll && (foundRoll.status === "REJECTED" || foundRoll.status === "REWORK")) ||
-      apiStatus === "BLOCKED";
-
-    if (isPass && !isReject) {
-      setScanState("pass");
-      setCurrentPassRoll(formattedId);
-      playSuccessTick();
-
-      const newPkg: LoadedPackage = {
-        id: `pkg-${Date.now()}`,
-        rollCode: formattedId,
-        fabricType: foundRoll?.fabricType || "Cloth Roll",
-        weight: Math.floor(Math.random() * 50) + 80,
-        value: Math.floor(Math.random() * 50000) + 30000
-      };
-
-      setLoadedPackages(prev => [newPkg, ...prev]);
-      setScannedInput("");
-
-      setTimeout(() => {
-        setScanState("idle");
-      }, 2500);
-
-    } else {
+    } catch (e: any) {
+      setBlockerReason(`Database Connection Error: ${e.message}`);
       setScanState("reject");
     }
   };
@@ -204,22 +194,46 @@ export default function DispatchScanner() {
   const handleClearAlarm = () => {
     setScanState("idle");
     setScannedInput("");
+    setBlockerReason("");
   };
 
-  const handleDispatch = () => {
+  // Commit dispatch to PostgreSQL database
+  const handleDispatch = async () => {
     if (loadedPackages.length === 0) return;
     setIsDispatching(true);
-    
-    // Simulate truck driving away
-    setTimeout(() => {
-      setLoadedPackages([]);
+
+    try {
+      const res = await fetch("http://localhost:5000/api/dispatch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          packages: loadedPackages.map((p) => ({
+            roll_id: p.rollCode,
+            quantity: p.weight,
+            unit_price: 120,
+          })),
+          vehicle_number: "KA-04-E-8821",
+          destination: "Main Logistics Hub",
+        }),
+      });
+
+      const outcome = await res.json();
+      if (res.ok && outcome.success) {
+        setGatePassRecord(outcome.data?.dispatch || {
+          dispatch_reference: `VAS-DSP-${Date.now().toString().slice(-6)}`,
+          vehicle_number: "KA-04-E-8821",
+          destination: "Main Logistics Hub",
+        });
+        setLoadedPackages([]);
+        setDispatchSuccess(true);
+      } else {
+        alert(outcome.error?.message || "Could not authorize dispatch in database.");
+      }
+    } catch (err: any) {
+      alert("Error committing dispatch to PostgreSQL: " + err.message);
+    } finally {
       setIsDispatching(false);
-      setDispatchSuccess(true);
-      
-      setTimeout(() => {
-        setDispatchSuccess(false);
-      }, 3000);
-    }, 1500);
+    }
   };
 
   const totalWeight = loadedPackages.reduce((acc, p) => acc + p.weight, 0);
@@ -244,9 +258,9 @@ export default function DispatchScanner() {
                 <Lock className="w-12 h-12 text-white" />
               </div>
               <div className="space-y-3">
-                <h1 className="text-4xl font-serif tracking-tight">Quality Block Active</h1>
-                <p className="text-lg font-light text-red-100">
-                  This roll did not pass quality inspection and cannot be loaded onto the truck.
+                <h1 className="text-4xl font-serif tracking-tight">Quality Gate Block Active</h1>
+                <p className="text-lg font-light text-red-100 max-w-xl">
+                  {blockerReason || "This roll did not pass quality inspection and cannot be loaded onto the vehicle."}
                 </p>
               </div>
               <button
@@ -286,10 +300,31 @@ export default function DispatchScanner() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 flex items-center gap-3 shadow-sm"
+              className="p-5 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
             >
-              <CheckCircle2 className="w-5 h-5 text-teal-600" />
-              <span className="text-sm font-medium">Truck dispatched successfully! The shipment is on its way.</span>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-emerald-950">Official Gate Pass Authorized: {gatePassRecord?.dispatch_reference}</p>
+                  <p className="text-xs text-emerald-700">Vehicle: {gatePassRecord?.vehicle_number} · Destination: {gatePassRecord?.destination} · Recorded in PostgreSQL.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/dispatch/dispatch-history"
+                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg shadow-sm transition"
+                >
+                  View in History
+                </Link>
+                <button
+                  onClick={() => setDispatchSuccess(false)}
+                  className="px-3 py-1.5 bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100 text-xs font-semibold rounded-lg transition"
+                >
+                  Dismiss
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

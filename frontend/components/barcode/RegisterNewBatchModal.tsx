@@ -27,18 +27,34 @@ export const RegisterNewBatchModal: React.FC<RegisterNewBatchModalProps> = ({
   onSuccess,
 }) => {
   const [formData, setFormData] = useState({
+    barcode: prefilledBarcode || '',
+    batch_code: '',
     yarn_type: 'Cotton' as YarnType,
-    colour: '',
-    supplier: '',
+    colour: 'Egyptian White',
+    supplier: 'Al-Amal Cotton Mills',
     supplier_lot: '',
-    quantity_received: '',
+    quantity_received: '500',
     unit: 'kg',
-    reorder_threshold: '250',
+    reorder_threshold: '100',
+    autoIntake: false,
   });
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createdBatch, setCreatedBatch] = useState<YarnBatch | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      const code = prefilledBarcode || `VAS-QR-Y${Math.floor(10 + Math.random() * 90)}`;
+      const batchCode = code.replace('VAS-QR-', 'VAS-DEMO-');
+      setFormData((prev) => ({
+        ...prev,
+        barcode: prefilledBarcode || prev.barcode || code,
+        batch_code: prev.batch_code || batchCode,
+      }));
+      setErrorMessage(null);
+    }
+  }, [isOpen, prefilledBarcode]);
 
   if (!isOpen) return null;
 
@@ -57,18 +73,27 @@ export const RegisterNewBatchModal: React.FC<RegisterNewBatchModalProps> = ({
       return;
     }
 
+    const barcodeVal = formData.barcode.trim() || `VAS-QR-Y${Math.floor(10 + Math.random() * 90)}`;
+    const batchCodeVal = formData.batch_code.trim() || barcodeVal.replace('VAS-QR-', 'VAS-DEMO-');
+
     setSubmitting(true);
 
     try {
-      const res = await api.registerBatchWithBarcode({
+      const res = await api.receiveYarnBatch({
+        batch_code: batchCodeVal,
+        barcode: barcodeVal,
         yarn_type: formData.yarn_type,
         colour: formData.colour.trim(),
         supplier: formData.supplier.trim(),
-        supplier_lot: formData.supplier_lot.trim() || undefined,
         quantity_received: qty,
         unit: formData.unit || 'kg',
         reorder_threshold: parseFloat(formData.reorder_threshold) || 100,
       });
+
+      if (formData.autoIntake && res?.batch?.id) {
+        await api.markBatchScanned(res.batch.id);
+        res.batch.intake_scanned = true;
+      }
 
       setCreatedBatch(res.batch);
       onSuccess(res.batch);
@@ -124,6 +149,34 @@ export const RegisterNewBatchModal: React.FC<RegisterNewBatchModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Barcode ID <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. VAS-QR-Y07"
+                value={formData.barcode}
+                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Batch Code <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. VAS-DEMO-Y07"
+                value={formData.batch_code}
+                onChange={(e) => setFormData({ ...formData, batch_code: e.target.value })}
+                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Yarn Type <span className="text-rose-500">*</span>
               </label>
               <select
@@ -167,47 +220,33 @@ export const RegisterNewBatchModal: React.FC<RegisterNewBatchModalProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Supplier Batch/Lot (Optional)
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. VRD-LOT-901"
-                value={formData.supplier_lot}
-                onChange={(e) => setFormData({ ...formData, supplier_lot: e.target.value })}
-                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Received Quantity (kg) <span className="text-rose-500">*</span>
               </label>
               <input
                 type="number"
                 step="any"
-                placeholder="2000"
+                placeholder="500"
                 value={formData.quantity_received}
                 onChange={(e) => setFormData({ ...formData, quantity_received: e.target.value })}
                 className="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
                 required
               />
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Reorder Threshold (kg)
-              </label>
-              <input
-                type="number"
-                step="any"
-                placeholder="300"
-                value={formData.reorder_threshold}
-                onChange={(e) => setFormData({ ...formData, reorder_threshold: e.target.value })}
-                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
-            </div>
           </div>
 
+          <div className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+            <input
+              type="checkbox"
+              id="autoIntake"
+              checked={formData.autoIntake}
+              onChange={(e) => setFormData({ ...formData, autoIntake: e.target.checked })}
+              className="h-4 w-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
+            />
+            <label htmlFor="autoIntake" className="text-xs text-slate-700 cursor-pointer">
+              <span className="font-semibold text-slate-900">Immediately in-take into active Dashboard</span>
+              <span className="block text-[11px] text-slate-500">If unchecked, it goes to "Pending Incoming Batches" for barcode scanning.</span>
+            </label>
+          </div>
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 space-y-1">
             <span className="font-semibold text-slate-800 block">Barcode Provisioning:</span>
             <p className="text-[11px] text-slate-500">

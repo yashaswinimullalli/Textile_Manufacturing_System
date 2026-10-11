@@ -553,7 +553,24 @@ class SimulationEngine {
 
   // Section 5: Build realistic event scenarios (10 Scenarios)
   public triggerScenario(machineId: string, scenario: SimulationScenario, customReason?: string) {
-    const m = this.machinesState.get(machineId);
+    let m = this.machinesState.get(machineId);
+    if (!m) {
+      m = this.machinesState.get(`mach-${machineId}`);
+    }
+    if (!m) {
+      const idNum = machineId.replace(/[^0-9]/g, '');
+      for (const val of this.machinesState.values()) {
+        const valNum = val.machine_id.replace(/[^0-9]/g, '');
+        if (
+          val.machine_code.toLowerCase().includes(machineId.toLowerCase()) ||
+          machineId.toLowerCase().includes(val.machine_id.toLowerCase()) ||
+          (idNum && valNum && idNum === valNum)
+        ) {
+          m = val;
+          break;
+        }
+      }
+    }
     if (!m) throw new Error(`Machine ${machineId} not found`);
 
     m.active_scenario = scenario;
@@ -646,29 +663,46 @@ class SimulationEngine {
   // Record events to machine_events and sync order review flag
   private async logStateEvent(m: MachineTelemetry, eventType: string, reason: string) {
     try {
-      // Sync with database if pool is alive
-      await pool.query(
-        `INSERT INTO machine_events (machine_id, order_id, event_type, event_source, reason, event_time)
-         VALUES ($1, $2, $3, 'Simulator', $4, NOW())`,
-        [m.machine_id, m.active_order_id, eventType, reason]
-      );
-
-      // Keep machines table in sync with simulated status
-      if (['Running', 'Stopped', 'Idle', 'Maintenance'].includes(eventType)) {
-        await pool.query(
-          `UPDATE machines SET status = $1, last_output_time = NOW(), updated_at = NOW() 
-           WHERE id = $2 OR machine_code ILIKE $3`,
-          [eventType, m.machine_id, `%${m.machine_code.split(' ')[0]}%`]
-        );
+      // Resolve numeric machine_id for PostgreSQL
+      let numericId: number | null = null;
+      const numMatch = m.machine_id.match(/\d+/);
+      if (numMatch) {
+        numericId = parseInt(numMatch[0], 10);
       }
 
-      // If stopped or breakdown, flag order for review
-      if (m.active_order_id && ['Stopped', 'Breakdown Reported', 'Maintenance'].includes(eventType)) {
+      let dbMachineId: number | null = null;
+      if (numericId) {
+        const mCheck = await pool.query("SELECT id FROM machines WHERE id = $1 LIMIT 1", [numericId]);
+        if (mCheck.rows.length > 0) dbMachineId = mCheck.rows[0].id;
+      }
+      if (!dbMachineId) {
+        const mCheck = await pool.query("SELECT id FROM machines WHERE machine_code ILIKE $1 LIMIT 1", [`%${m.machine_code.split(' ')[0]}%`]);
+        if (mCheck.rows.length > 0) dbMachineId = mCheck.rows[0].id;
+      }
+
+      if (dbMachineId) {
+        let dbStatus = 'AVAILABLE';
+        let dbEventType = 'OTHER';
+        if (eventType === 'Running' || eventType === 'Resumed') {
+          dbStatus = 'RUNNING';
+          dbEventType = 'START';
+        } else if (eventType === 'Stopped' || eventType === 'Emergency Stop') {
+          dbStatus = 'STOPPED';
+          dbEventType = 'STOP';
+        } else if (eventType === 'Maintenance') {
+          dbStatus = 'MAINTENANCE';
+          dbEventType = 'MAINTENANCE';
+        }
+
         await pool.query(
-          `UPDATE production_orders 
-           SET is_flagged_for_review = TRUE, flag_reason = $1, updated_at = NOW() 
-           WHERE id = $2`,
-          [`Machine ${m.machine_code} reported ${eventType}: "${reason}".`, m.active_order_id]
+          "UPDATE machines SET status = $1 WHERE id = $2",
+          [dbStatus, dbMachineId]
+        );
+
+        await pool.query(
+          `INSERT INTO machine_events (machine_id, event_type, reason, started_at, remarks, created_at)
+           VALUES ($1, $2, $3, NOW(), $4, NOW())`,
+          [dbMachineId, dbEventType, reason, `Simulator event: ${eventType}`]
         );
       }
     } catch {
@@ -698,22 +732,24 @@ class SimulationEngine {
     }
 
     try {
-      await pool.query(
-        `INSERT INTO production_records (order_id, machine_id, quantity_produced, recorded_at)
-         VALUES ($1, $2, $3, NOW())`,
-        [m.active_order_id, m.machine_id, qty]
-      );
-      await pool.query(
-        `UPDATE production_orders 
-         SET produced_quantity = produced_quantity + $1, updated_at = NOW() 
-         WHERE id = $2`,
-        [qty, m.active_order_id]
-      );
-      await pool.query(
-        `UPDATE machines SET last_output_time = NOW(), updated_at = NOW() 
-         WHERE id = $1 OR machine_code ILIKE $2`,
-        [m.machine_id, `%${m.machine_code.split(' ')[0]}%`]
-      );
+      let numericMachineId: number | null = null;
+      const mMatch = String(m.machine_id).match(/\d+/);
+      if (mMatch) numericMachineId = parseInt(mMatch[0], 10);
+
+      const numOrderId = Number(m.active_order_id);
+      if (!isNaN(numOrderId)) {
+        await pool.query(
+          `INSERT INTO production_records (production_order_id, machine_id, employee_id, quantity_produced, production_date, remarks, created_at)
+           VALUES ($1, $2, 1, $3, NOW(), 'Simulator telemetry auto-logged output', NOW())`,
+          [numOrderId, numericMachineId, qty]
+        );
+        await pool.query(
+          `UPDATE production_orders 
+           SET produced_quantity = produced_quantity + $1, updated_at = NOW() 
+           WHERE id = $2`,
+          [qty, numOrderId]
+        );
+      }
     } catch {
       // Offline fallback: already captured in this.simulatedRecords
     }

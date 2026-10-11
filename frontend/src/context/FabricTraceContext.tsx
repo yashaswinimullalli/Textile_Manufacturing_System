@@ -73,85 +73,8 @@ export interface FabricTraceContextType {
   isOnline: boolean;
 }
 
-// ─── 50 Realistic Fallback Fabric Rolls (#1001 - #1050) ──────────────────────
-const FABRIC_TYPES_LIST = [
-  "100% Cotton",
-  "Heavy Denim",
-  "Silk",
-  "Pure Organic Linen",
-  "Cotton Twill 240 GSM",
-  "Poly-Cotton Poplin",
-  "Modal Satin Blend",
-  "Oxford Weave Cotton"
-];
-
-function generate50DefaultRolls(): FabricRoll[] {
-  const rolls: FabricRoll[] = [];
-  const operators = ["Ramesh P", "Sunita S", "Kavita R", "Vikram S", "Deepak J"];
-
-  for (let i = 1; i <= 50; i++) {
-    const num = 1000 + i;
-    const rollId = `#${num}`;
-    const rollCode = `ROLL-${num}`;
-    const fabricType = FABRIC_TYPES_LIST[(i - 1) % FABRIC_TYPES_LIST.length];
-
-    let status: "PENDING" | "PASSED" | "REWORK" | "REJECTED" | "DISPATCHED" = "PASSED";
-    if (i === 42 || i === 28) status = "REJECTED";
-    else if (i === 15 || i === 8 || i === 35) status = "REWORK";
-    else if (i > 45) status = "PENDING";
-
-    rolls.push({
-      id: `roll-${num}`,
-      rollId,
-      roll_code: rollCode,
-      fabricType,
-      produced_quantity: 180 + ((i * 12) % 120),
-      dispatched_quantity: status === "PASSED" && i <= 5 ? 180 : 0,
-      unit: "metres",
-      operational_status: status,
-      machine_id: `LOOM-0${(i % 5) + 1}`,
-      shift: i % 2 === 0 ? "Morning Shift A" : "Evening Shift B",
-      yarn_batch: `YB-2026-${800 + i}`,
-      operator_name: operators[(i - 1) % operators.length],
-      status
-    });
-  }
-  return rolls;
-}
-
-// ─── Baseline Emergency Action Cards ──────────────────────────────────────────
-const INITIAL_INTERVENTIONS: ActionCardItem[] = [
-  {
-    id: "init-1",
-    rollId: "Roll #1042",
-    fabricType: "Heavy Denim",
-    status: "REJECTED",
-    whatHappened: "Roll #1042 is Bad (Hole).",
-    whyItMatters: "Order #50 is now short.",
-    whoShouldAct: "Floor Lead & Buyer Rep",
-    actions: ["Buy More Yarn", "Tell Customer"]
-  },
-  {
-    id: "init-2",
-    rollId: "Roll #1015",
-    fabricType: "100% Cotton",
-    status: "REWORK",
-    whatHappened: "Roll #1015 has Bad Weave.",
-    whyItMatters: "Cloth needs steam wash before shipping.",
-    whoShouldAct: "Washing Department Head",
-    actions: ["Send to Wash", "Cut Flawed End"]
-  },
-  {
-    id: "init-3",
-    rollId: "Roll #1028",
-    fabricType: "Silk",
-    status: "REJECTED",
-    whatHappened: "Roll #1028 has Oil Stain.",
-    whyItMatters: "Luxury batch delivery is delayed.",
-    whoShouldAct: "Plant Manager",
-    actions: ["Buy More Yarn", "Scrap Damaged Cloth"]
-  }
-];
+// ─── FabricTrace Global Context (Pure PostgreSQL Integration) ──────────────
+const INITIAL_INTERVENTIONS: ActionCardItem[] = [];
 
 // Helper to calculate daily receipt with simple math
 function generateDayReceipt(date: string, scrapDeductions: FinancialRecordItem[] = []): FinancialDayReceipt {
@@ -229,7 +152,7 @@ function generateDayReceipt(date: string, scrapDeductions: FinancialRecordItem[]
 const FabricTraceContext = createContext<FabricTraceContextType | undefined>(undefined);
 
 export function FabricTraceProvider({ children }: { children: React.ReactNode }) {
-  const [fabricRolls, setFabricRolls] = useState<FabricRoll[]>(generate50DefaultRolls());
+  const [fabricRolls, setFabricRolls] = useState<FabricRoll[]>([]);
   const [interventions, setInterventions] = useState<ActionCardItem[]>(INITIAL_INTERVENTIONS);
   const [selectedDate, setSelectedDate] = useState<string>("2026-10-10");
   const [scrapDeductionsByDate, setScrapDeductionsByDate] = useState<Record<string, FinancialRecordItem[]>>({});
@@ -289,26 +212,25 @@ export function FabricTraceProvider({ children }: { children: React.ReactNode })
       const res = await fetch("http://localhost:5000/api/rolls");
       if (!res.ok) throw new Error("Server not reached");
       const data = await res.json();
-      if (data.rolls && data.rolls.length > 0) {
-        const mapped: FabricRoll[] = data.rolls.map((r: any) => ({
-          id: r.id,
-          rollId: r.roll_code.startsWith("#") ? r.roll_code : `#${r.roll_code.replace("ROLL-", "")}`,
-          roll_code: r.roll_code,
-          fabricType: r.fabric_type,
-          produced_quantity: r.produced_quantity,
-          dispatched_quantity: r.dispatched_quantity || 0,
-          unit: r.unit || "metres",
-          operational_status: r.operational_status,
-          machine_id: r.machine_id,
-          shift: r.shift,
-          yarn_batch: r.yarn_batch,
-          operator_name: r.operator_name,
-          status: r.operational_status
-        }));
-        setFabricRolls(mapped);
-      }
+      const rawList = data.rolls || data.data || [];
+      const mapped: FabricRoll[] = rawList.map((r: any) => ({
+        id: String(r.id),
+        rollId: r.roll_code?.startsWith("#") ? r.roll_code : `#${(r.roll_code || r.roll_id || '').replace(/^ROLL-/, '')}`,
+        roll_code: r.roll_code || r.roll_id,
+        fabricType: r.fabric_type || 'Standard Weave Cotton',
+        produced_quantity: parseFloat(r.produced_quantity || r.weight || 0),
+        dispatched_quantity: parseFloat(r.dispatched_quantity || 0),
+        unit: r.unit || "metres",
+        operational_status: r.operational_status || (r.qc_status === 'APPROVED' ? 'PASSED' : r.qc_status),
+        machine_id: r.machine_id || 'LOOM-01',
+        shift: r.shift || 'Morning Shift A',
+        yarn_batch: r.yarn_batch || `YB-LOT-${r.id}`,
+        operator_name: r.operator_name || 'Floor Operator',
+        status: r.operational_status || (r.qc_status === 'APPROVED' ? 'PASSED' : r.qc_status)
+      }));
+      setFabricRolls(mapped);
     } catch (err) {
-      console.warn("Using local cache / default 50 rolls:", err);
+      console.warn("Could not fetch database fabric rolls:", err);
     }
   }, []);
 
@@ -420,6 +342,7 @@ export function FabricTraceProvider({ children }: { children: React.ReactNode })
     // 5. Offline Queue or Direct Server POST
     const payload = {
       decision,
+      disposition: decision === "PASS" ? "APPROVED" : (decision === "REWORK" ? "REINSPECTION" : "REJECTED"),
       defect_type: defects.length > 0 ? defects[0].defect : "none",
       affected_quantity: decision === "PASS" ? 0 : 30,
       notes: notes || "Checked on factory tablet.",

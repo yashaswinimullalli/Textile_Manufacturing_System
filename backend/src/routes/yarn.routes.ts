@@ -20,6 +20,7 @@ const receiveBatchSchema = z.object({
   storage_location_id: z.union([z.number(), z.string()]).optional(),
   storage_location: z.string().optional(),
   qc_status: z.enum(['PENDING_INSPECTION', 'PASSED', 'ON_HOLD', 'PARTIALLY_ACCEPTED', 'REJECTED']).default('PENDING_INSPECTION'),
+  intake_scanned: z.boolean().optional(),
   received_at: z.string().optional(),
 });
 
@@ -29,6 +30,7 @@ function mapYarnBatch(row: any) {
     ...row,
     id: String(row.id),
     barcode: row.barcode_id || row.barcode,
+    intake_scanned: Boolean(row.intake_scanned),
     supplier: row.supplier_name || row.supplier,
     quantity_received: parseFloat(row.received_quantity ?? row.quantity_received ?? 0),
     quantity_available: parseFloat(row.available_quantity ?? row.quantity_available ?? 0),
@@ -38,6 +40,52 @@ function mapYarnBatch(row: any) {
     reorder_threshold: parseFloat(row.reorder_threshold ?? 100),
   };
 }
+
+// POST /api/yarn-batches/:id/intake-scan (Mark raw material as scanned into inventory)
+yarnRouter.post('/:id/intake-scan', async (req: Request, res: Response) => {
+  const id = String(req.params.id).trim();
+  try {
+    const isNumeric = /^\d+$/.test(id);
+    const result = await pool.query(
+      `UPDATE yarn_batches 
+       SET intake_scanned = TRUE, updated_at = NOW() 
+       WHERE ${isNumeric ? 'id = $1 OR' : ''} LOWER(batch_code) = LOWER($1) OR LOWER(barcode_id) = LOWER($1)
+       RETURNING *`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Yarn batch not found' } });
+    }
+
+    return res.json({ success: true, data: mapYarnBatch(result.rows[0]), message: 'Raw material scanned and stored into active inventory.' });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { code: 'DATABASE_ERROR', message: err.message } });
+  }
+});
+
+// DELETE /api/yarn-batches/:id/intake-scan (Remove from scanned list)
+yarnRouter.delete('/:id/intake-scan', async (req: Request, res: Response) => {
+  const id = String(req.params.id).trim();
+  try {
+    const isNumeric = /^\d+$/.test(id);
+    const result = await pool.query(
+      `UPDATE yarn_batches 
+       SET intake_scanned = FALSE, updated_at = NOW() 
+       WHERE ${isNumeric ? 'id = $1 OR' : ''} LOWER(batch_code) = LOWER($1) OR LOWER(barcode_id) = LOWER($1)
+       RETURNING *`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Yarn batch not found' } });
+    }
+
+    return res.json({ success: true, data: mapYarnBatch(result.rows[0]), message: 'Raw material removed from active inventory.' });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { code: 'DATABASE_ERROR', message: err.message } });
+  }
+});
 
 // GET /api/yarn-batches/barcode/:barcode (Quick lookup for scanner)
 yarnRouter.get('/barcode/:barcode', async (req: Request, res: Response) => {
@@ -76,7 +124,7 @@ yarnRouter.get('/barcode/:barcode', async (req: Request, res: Response) => {
 
 // GET /api/yarn-batches (List with search & filters)
 yarnRouter.get('/', async (req: Request, res: Response) => {
-  const { yarn_type, low_stock, search, qc_status, storage_location_id } = req.query;
+  const { yarn_type, low_stock, search, qc_status, storage_location_id, intake_scanned } = req.query;
   try {
     let query = `
       SELECT yb.*, sl.location_code, sl.rack_name
@@ -85,6 +133,12 @@ yarnRouter.get('/', async (req: Request, res: Response) => {
       WHERE 1=1
     `;
     const params: any[] = [];
+
+    if (intake_scanned === 'true') {
+      query += ' AND yb.intake_scanned = TRUE';
+    } else if (intake_scanned === 'false') {
+      query += ' AND (yb.intake_scanned = FALSE OR yb.intake_scanned IS NULL)';
+    }
 
     if (yarn_type && yarn_type !== 'ALL') {
       params.push(yarn_type);
@@ -144,6 +198,51 @@ yarnRouter.get('/:id', async (req: Request, res: Response) => {
     return res.json({ success: true, data: mapYarnBatch(result.rows[0]) });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: { code: 'DATABASE_ERROR', message: err.message } });
+  }
+});
+
+// POST /api/yarn-batches/quick-add (Generate next sequential barcode like VAS-QR-Y07, VAS-QR-Y08)
+yarnRouter.post('/quick-add', async (req: Request, res: Response) => {
+  try {
+    const existing = await pool.query('SELECT batch_code, barcode_id FROM yarn_batches ORDER BY id DESC LIMIT 50');
+    let nextNum = 7;
+    for (const row of existing.rows) {
+      const match = (row.barcode_id || '').match(/VAS-QR-Y0*(\d+)/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num >= nextNum) nextNum = num + 1;
+      }
+    }
+
+    const padNum = nextNum < 10 ? `0${nextNum}` : `${nextNum}`;
+    const batchCode = `VAS-DEMO-Y${padNum}`;
+    const barcodeId = `VAS-QR-Y${padNum}`;
+
+    const YARN_PRESETS = [
+      { type: 'Cotton', colour: 'Egyptian White', supplier: 'Al-Amal Cotton Mills', qty: 500 },
+      { type: 'Polyester', colour: 'Obsidian Black', supplier: 'Indorama Ventures', qty: 450 },
+      { type: 'Blend', colour: 'Cobalt Melange', supplier: 'Vardhman PolyBlend', qty: 380 },
+      { type: 'Cotton', colour: 'Crimson Rose', supplier: 'Sutlej Textiles', qty: 520 },
+      { type: 'Blend', colour: 'Sage Moss', supplier: 'RSWM Spinners Ltd', qty: 340 },
+      { type: 'Cotton', colour: 'Golden Ochre', supplier: 'Premier Cotton Hub', qty: 480 },
+    ];
+    const preset = YARN_PRESETS[(nextNum - 1) % YARN_PRESETS.length];
+
+    const result = await pool.query(
+      `INSERT INTO yarn_batches 
+        (batch_code, barcode_id, yarn_type, colour, supplier_name, received_quantity, available_quantity, unit, reorder_threshold, storage_location_id, qc_status, intake_scanned, received_at, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $6, 'kg', 100, 1, 'PENDING_INSPECTION', FALSE, NOW(), NOW(), NOW())
+       RETURNING *`,
+      [batchCode, barcodeId, preset.type, preset.colour, preset.supplier, preset.qty]
+    );
+
+    return res.status(201).json({
+      success: true,
+      data: mapYarnBatch(result.rows[0]),
+      message: `New yarn barcode "${barcodeId}" (${batchCode}) created and ready for in-take!`,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { code: 'INSERT_ERROR', message: err.message } });
   }
 });
 
@@ -212,12 +311,13 @@ yarnRouter.post('/', async (req: Request, res: Response) => {
       // If qc_status is explicitly PASSED, available_quantity = qty
       const initialQcStatus = data.qc_status || 'PENDING_INSPECTION';
       const availableQty = initialQcStatus === 'PASSED' ? qty : 0;
+      const isScanned = Boolean(data.intake_scanned);
 
       const batchRes = await client.query(
         `INSERT INTO yarn_batches 
           (batch_code, barcode_id, yarn_type, colour, supplier_name, received_quantity, available_quantity, 
-           unit, reorder_threshold, storage_location_id, qc_status, received_at, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+           unit, reorder_threshold, storage_location_id, qc_status, intake_scanned, received_at, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
          RETURNING *`,
         [
           batchCode,
@@ -231,6 +331,7 @@ yarnRouter.post('/', async (req: Request, res: Response) => {
           data.reorder_threshold || 100,
           storageLocationId,
           initialQcStatus,
+          isScanned,
           receivedAt,
         ]
       );

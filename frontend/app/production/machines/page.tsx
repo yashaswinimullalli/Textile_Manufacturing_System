@@ -30,7 +30,7 @@ import {
   Search,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Machine, ProductionOrder, MachineStatus, ProductionRecord, MachineTelemetry, SimulationScenario } from '@/lib/types';
+import { Machine, ProductionOrder, MachineStatus, ProductionRecord, MachineTelemetry, SimulationScenario, YarnBatch } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { InteractiveMachineFloorScene } from '@/components/machines/InteractiveMachineFloorScene';
 
@@ -38,6 +38,7 @@ export default function MachinesPage() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [records, setRecords] = useState<ProductionRecord[]>([]);
+  const [yarnBatches, setYarnBatches] = useState<YarnBatch[]>([]);
   const [telemetries, setTelemetries] = useState<MachineTelemetry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -78,15 +79,19 @@ export default function MachinesPage() {
   const loadData = async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     try {
-      const [machs, ords, recs, tels] = await Promise.all([
+      const [machs, ords, recs, tels, bts] = await Promise.all([
         api.getMachines(),
         api.getOrders(),
         api.getProductionRecords(),
         api.getAllSimulationMachines().catch(() => [] as MachineTelemetry[]),
+        api.getYarnBatches().catch(() => [] as YarnBatch[]),
       ]);
       setMachines(machs);
       setOrders(ords);
       setRecords(recs);
+      if (bts && bts.length > 0) {
+        setYarnBatches(bts);
+      }
       if (tels && tels.length > 0) {
         setTelemetries(tels);
       }
@@ -98,6 +103,16 @@ export default function MachinesPage() {
       console.error('Failed to load machine data', err);
     } finally {
       if (!isBackground) setLoading(false);
+    }
+  };
+
+  const handleAssignBatchMachines = async (machineIds: string[]) => {
+    try {
+      const res = await api.assignBatchMachines({ machine_ids: machineIds });
+      setNotification(`⚡ Successfully assigned ${res.count} machines in bay to production orders.`);
+      loadData(false);
+    } catch (err: any) {
+      alert(err.message || 'Failed to assign batch machines');
     }
   };
 
@@ -408,11 +423,13 @@ export default function MachinesPage() {
       <InteractiveMachineFloorScene
         machines={machines}
         orders={orders}
+        batches={yarnBatches}
         telemetries={telemetries}
         onSimulateScenario={handleSimulateScenario}
         selectedMachine={selectedMachine}
         onSelectMachine={setSelectedMachine}
         inactivityInterval={inactivityInterval}
+        onAssignBatchMachines={handleAssignBatchMachines}
         onAssignClick={(m) => {
           setAssigningMachine(m);
           setSelectedOrderId(m.active_order_id || (orders[0]?.id ?? ''));

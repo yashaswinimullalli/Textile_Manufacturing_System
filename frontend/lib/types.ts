@@ -93,6 +93,7 @@ export interface YarnBatch {
   unit: string;
   reorder_threshold: number;
   storage_location?: string;
+  intake_scanned?: boolean;
   received_at: string;
   created_at: string;
 }
@@ -129,12 +130,16 @@ export interface ProductionOrder {
 export interface Machine {
   id: string;
   machine_code: string;
+  machine_name?: string;
   process_type: string;
   current_status: MachineStatus;
   current_shift?: string;
   assigned_operator?: string;
   active_order_id?: string;
   active_order_no?: string;
+  customer_name?: string;
+  fabric_type?: string;
+  capacity?: number;
   last_output_time?: string;
   created_at: string;
   updated_at?: string;

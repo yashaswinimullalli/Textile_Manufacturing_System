@@ -132,6 +132,26 @@ ordersRouter.delete('/demo', async (req: Request, res: Response) => {
   }
 });
 
+// DELETE /api/orders/all (Remove all orders, rolls, assignments and reset machines)
+ordersRouter.delete('/all', async (req: Request, res: Response) => {
+  try {
+    await pool.query('DELETE FROM fabric_inspections');
+    await pool.query('DELETE FROM dispatch_items');
+    await pool.query('DELETE FROM fabric_rolls');
+    await pool.query('DELETE FROM production_records');
+    await pool.query('DELETE FROM machine_assignments');
+    await pool.query("UPDATE machines SET status = 'AVAILABLE'");
+    const delOrders = await pool.query('DELETE FROM production_orders');
+    return res.json({
+      success: true,
+      count: delOrders.rowCount || 0,
+      message: `Cleaned up ${delOrders.rowCount || 0} production orders.`,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { message: err.message } });
+  }
+});
+
 // POST /api/orders/bulk (Bulk import production orders)
 ordersRouter.post('/bulk', async (req: Request, res: Response) => {
   const { orders, replaceDemo } = req.body;
@@ -162,7 +182,7 @@ ordersRouter.post('/bulk', async (req: Request, res: Response) => {
 
       if (!orderNumber || reqQty <= 0) continue;
 
-      await pool.query(
+      const orderInsertRes = await pool.query(
         `INSERT INTO production_orders 
           (order_number, customer_name, fabric_type, required_quantity, produced_quantity, unit, status, priority, start_date, due_date, created_at, updated_at)
          VALUES ($1, $2, $3, $4, 0, $5, 'PENDING', 'NORMAL', $6, $7, NOW(), NOW())
@@ -172,16 +192,30 @@ ordersRouter.post('/bulk', async (req: Request, res: Response) => {
            fabric_type = EXCLUDED.fabric_type,
            required_quantity = EXCLUDED.required_quantity,
            due_date = EXCLUDED.due_date,
-           updated_at = NOW()`,
+           updated_at = NOW()
+         RETURNING id`,
         [orderNumber, customerName, fabricType, reqQty, unit, startDate, dueDate]
       );
+      
+      const orderId = orderInsertRes.rows[0]?.id;
+      if (orderId) {
+        const rollCode = `ROLL-${orderNumber.replace(/[^A-Za-z0-9]/g, '')}`;
+        const qrCode = `QR-${orderNumber}`;
+        await pool.query(
+          `INSERT INTO fabric_rolls (roll_id, qr_code, production_order_id, weight, unit, qc_status, dispatched_quantity, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, 'APPROVED', 0, NOW(), NOW())
+           ON CONFLICT (roll_id) 
+           DO UPDATE SET weight = EXCLUDED.weight, updated_at = NOW()`,
+          [rollCode, qrCode, orderId, reqQty, unit]
+        );
+      }
       inserted++;
     }
 
     return res.status(201).json({
       success: true,
       count: inserted,
-      message: `Successfully imported ${inserted} production orders into system.`,
+      message: `Successfully imported ${inserted} production orders and synced rolls into system.`,
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: { message: err.message } });
@@ -250,9 +284,19 @@ ordersRouter.post('/', async (req: Request, res: Response) => {
       ]
     );
 
+    const createdRow = result.rows[0];
+    const rollCode = `ROLL-${orderNumber.replace(/[^A-Za-z0-9]/g, '')}`;
+    const qrCode = `QR-${orderNumber}`;
+    await pool.query(
+      `INSERT INTO fabric_rolls (roll_id, qr_code, production_order_id, weight, unit, qc_status, dispatched_quantity, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, 'APPROVED', 0, NOW(), NOW())
+       ON CONFLICT (roll_id) DO UPDATE SET weight = EXCLUDED.weight, updated_at = NOW()`,
+      [rollCode, qrCode, createdRow.id, reqQty, data.unit || 'm']
+    );
+
     return res.status(201).json({
       success: true,
-      data: mapOrderRow(result.rows[0]),
+      data: mapOrderRow(createdRow),
       message: `Production Order "${orderNumber}" created successfully in PostgreSQL.`,
     });
   } catch (err: any) {

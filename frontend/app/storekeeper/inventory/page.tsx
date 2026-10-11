@@ -74,23 +74,40 @@ export default function YarnInventoryPage() {
     loadData();
   }, [typeFilter, lowStockOnly]);
 
-  // Filtered displayed batches: ONLY display when barcode number is manually given
+  // Scanned / Taken batches in the dashboard
+  const scannedBatches = React.useMemo(() => {
+    return batches.filter((b) => b.intake_scanned === true);
+  }, [batches]);
+
+  const unscannedBatches = React.useMemo(() => {
+    return batches.filter((b) => !b.intake_scanned);
+  }, [batches]);
+
+  // Filtered displayed batches: shows all scanned batches stored in dashboard, or filters by barcode query
   const displayedBatches = React.useMemo(() => {
     const query = manualBarcode.trim().toLowerCase();
-    if (!query) {
-      // Do NOT display batch rows when barcode is not provided
-      return [];
+
+    // If a search query is given, search across all batches
+    if (query) {
+      return batches.filter((b) => {
+        const matchBarcode = b.barcode?.toLowerCase().includes(query);
+        const matchBatchCode = b.batch_code?.toLowerCase().includes(query);
+        const matchId = String(b.id).toLowerCase() === query;
+        const matchType = typeFilter === 'ALL' || b.yarn_type === typeFilter;
+        const matchLowStock = !lowStockOnly || b.quantity_available <= b.reorder_threshold;
+        return (matchBarcode || matchBatchCode || matchId) && matchType && matchLowStock;
+      });
     }
 
-    return batches.filter((b) => {
-      const matchBarcode = b.barcode?.toLowerCase().includes(query);
-      const matchBatchCode = b.batch_code?.toLowerCase().includes(query);
-      const matchId = String(b.id).toLowerCase() === query;
-      const matchType = typeFilter === 'ALL' || b.yarn_type === typeFilter;
-      const matchLowStock = !lowStockOnly || b.quantity_available <= b.reorder_threshold;
-
-      return (matchBarcode || matchBatchCode || matchId) && matchType && matchLowStock;
-    });
+    // Default view: show all raw materials taken/scanned into the dashboard
+    let list = batches.filter((b) => b.intake_scanned === true);
+    if (typeFilter !== 'ALL') {
+      list = list.filter((b) => b.yarn_type === typeFilter);
+    }
+    if (lowStockOnly) {
+      list = list.filter((b) => b.quantity_available <= b.reorder_threshold);
+    }
+    return list;
   }, [batches, manualBarcode, typeFilter, lowStockOnly]);
 
   // Synchronize selection when barcode is entered or cleared
@@ -103,19 +120,62 @@ export default function YarnInventoryPage() {
       if (displayedBatches[0].storage_location) {
         setSelectedRackId(displayedBatches[0].storage_location);
       }
-    } else if (!manualBarcode.trim()) {
+    } else {
       setSelectedBatch(null);
       setSelectedRackId(null);
     }
-  }, [displayedBatches, manualBarcode]);
+  }, [displayedBatches]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  // In-Take raw material batch using barcode into the dashboard
+  const handleIntakeBatch = async (batchToTake: YarnBatch) => {
+    try {
+      await api.markBatchScanned(batchToTake.id);
+      setTransactionSuccess(`✓ Raw material ${batchToTake.batch_code} (${batchToTake.barcode}) stored into inventory dashboard! Now reflected in Quality Inspection.`);
+      setManualBarcode('');
+      await loadData();
+      setTimeout(() => {
+        setTransactionSuccess(null);
+      }, 7000);
+    } catch (err: any) {
+      console.error('Failed to mark batch scanned', err);
+    }
+  };
+
+  // Remove raw material from in-take list
+  const handleRemoveIntake = async (batchId: string) => {
+    try {
+      await api.unmarkBatchScanned(batchId);
+      setTransactionSuccess(`Batch removed from active in-take. It is now hidden from Quality Inspection.`);
+      await loadData();
+      setTimeout(() => {
+        setTransactionSuccess(null);
+      }, 6000);
+    } catch (err: any) {
+      console.error('Failed to unmark batch', err);
+    }
+  };
+
+  const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (displayedBatches.length > 0) {
-      setSelectedBatch(displayedBatches[0]);
-      if (displayedBatches[0].storage_location) {
-        setSelectedRackId(displayedBatches[0].storage_location);
+    const query = manualBarcode.trim().toLowerCase();
+    if (!query) return;
+
+    const matched = batches.find(
+      (b) =>
+        b.barcode?.toLowerCase() === query ||
+        b.batch_code?.toLowerCase() === query ||
+        String(b.id).toLowerCase() === query
+    );
+
+    if (matched) {
+      await handleIntakeBatch(matched);
+      setSelectedBatch(matched);
+      if (matched.storage_location) {
+        setSelectedRackId(matched.storage_location);
       }
+    } else {
+      setUnrecognizedCode(manualBarcode);
+      setIsRegisterOpen(true);
     }
   };
 
@@ -126,6 +186,22 @@ export default function YarnInventoryPage() {
     setTimeout(() => {
       setTransactionSuccess(null);
     }, 7000);
+  };
+
+  const handleQuickAdd = async () => {
+    try {
+      setLoading(true);
+      const res = await api.quickAddYarnBatch();
+      setTransactionSuccess(`✓ Generated new barcode ${res.barcode} (${res.batch_code}). Added to Pending Incoming Batches!`);
+      await loadData();
+      setTimeout(() => {
+        setTransactionSuccess(null);
+      }, 7000);
+    } catch (err: any) {
+      console.error('Quick add failed', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const lowStockCount = batches.filter(b => b.quantity_available <= b.reorder_threshold).length;
@@ -139,28 +215,38 @@ export default function YarnInventoryPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-slate-900">Yarn Warehouse</h1>
             <span className="bg-emerald-100 text-emerald-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-              {manualBarcode.trim()
-                ? `${displayedBatches.length} Batch${displayedBatches.length === 1 ? '' : 'es'} Displayed`
-                : 'Enter Barcode to View'}
+              {scannedBatches.length} Stored in Dashboard · {unscannedBatches.length} Awaiting In-Take
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Storage locations · Stock tracking · Quality control
+            Storage locations · Stock tracking · Quality control & Barcode In-Take
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Quick Add Barcode button */}
+          <button
+            type="button"
+            disabled={loading}
+            onClick={handleQuickAdd}
+            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-lg text-sm font-semibold shadow-xs transition-colors flex items-center gap-1.5"
+            title="Automatically generates next sequential barcode (e.g. VAS-QR-Y07, VAS-QR-Y08) with 1 click"
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>+ Quick Add Barcode</span>
+          </button>
+
           {/* Primary Action: Scan Barcode */}
           <button
             type="button"
             onClick={() => setIsScannerOpen(true)}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center gap-2 ring-2 ring-teal-500/50"
+            className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center gap-2 ring-2 ring-teal-500/50"
           >
             <Scan className="h-4 w-4 text-teal-400" />
             <span>Scan Barcode</span>
           </button>
 
-          {/* Register New Batch */}
+          {/* Register Custom Batch */}
           <button
             type="button"
             onClick={() => {
@@ -170,7 +256,7 @@ export default function YarnInventoryPage() {
             className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center gap-2"
           >
             <PlusCircle className="h-4 w-4" />
-            <span>Register Batch</span>
+            <span>+ Custom Barcode</span>
           </button>
 
           <button
@@ -237,14 +323,14 @@ export default function YarnInventoryPage() {
 
       {/* YARN INVENTORY TABLE */}
       <div className="space-y-4">
-          {/* Filter Toolbar */}
+          {/* Filter Toolbar & Barcode In-Take Form */}
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
             <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center gap-2 max-w-lg">
               <div className="relative flex-1">
                 <Scan className="absolute left-3 top-2.5 h-4 w-4 text-teal-600" />
                 <input
                   type="text"
-                  placeholder="Enter Barcode ID manually (e.g. VAS-QR-Y050)..."
+                  placeholder="Enter Barcode ID (e.g. VAS-QR-Y03, VAS-QR-Y04)..."
                   value={manualBarcode}
                   onChange={(e) => setManualBarcode(e.target.value)}
                   className="w-full pl-9 pr-8 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 font-mono"
@@ -268,8 +354,8 @@ export default function YarnInventoryPage() {
                 type="submit"
                 className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
               >
-                <Search className="h-4 w-4 text-teal-400" />
-                <span>Find Batch</span>
+                <Scan className="h-4 w-4 text-teal-400" />
+                <span>In-Take Batch</span>
               </button>
             </form>
 
@@ -305,8 +391,64 @@ export default function YarnInventoryPage() {
             </div>
           </div>
 
-            {/* Batches Table */}
+          {/* Awaiting Barcode In-Take Quick Panel */}
+          {unscannedBatches.length > 0 && (
+            <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50/50 rounded-xl border border-amber-200/80 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                  <span className="text-xs font-bold text-amber-950 uppercase tracking-wide">
+                    Pending Incoming Raw Materials ({unscannedBatches.length} Available for Barcode In-Take)
+                  </span>
+                </div>
+                <span className="text-[11px] text-amber-800">
+                  Click to in-take batch using barcode & release to Quality Inspection:
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+                {unscannedBatches.map((b) => (
+                  <div
+                    key={b.id}
+                    className="p-3 bg-white/95 rounded-lg border border-amber-200 hover:border-teal-400 hover:shadow-xs transition-all flex flex-col justify-between gap-2"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-slate-900">{b.barcode}</span>
+                        <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                          {b.yarn_type}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 mt-1 truncate">
+                        {b.colour} · {b.quantity_available} kg
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleIntakeBatch(b)}
+                      className="w-full py-1.5 px-2.5 bg-slate-900 hover:bg-teal-700 text-white rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+                    >
+                      <Scan className="h-3 w-3 text-teal-300" />
+                      <span>In-Take via Barcode</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Batches Table */}
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="p-3.5 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                  Active Raw Materials in Dashboard ({displayedBatches.length})
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-500 font-medium">
+                Reflected in Quality Inspection & Storage Racks
+              </span>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-600">
@@ -330,16 +472,16 @@ export default function YarnInventoryPage() {
                         Loading inventory records...
                       </td>
                     </tr>
-                  ) : !manualBarcode.trim() ? (
+                  ) : displayedBatches.length === 0 ? (
                     <tr>
                       <td colSpan={10} className="py-14 text-center">
                         <div className="max-w-md mx-auto flex flex-col items-center">
                           <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 mb-3 shadow-xs">
                             <Scan className="h-6 w-6" />
                           </div>
-                          <h3 className="text-sm font-bold text-slate-900">No Barcode Entered</h3>
+                          <h3 className="text-sm font-bold text-slate-900">No Raw Materials In-Taken Yet</h3>
                           <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                            Yarn batch records are hidden. Please enter a barcode number in the field above or click <span className="font-semibold text-teal-700">Scan Barcode</span> to display batch details.
+                            Yarn batches must be scanned and taken by barcode into the dashboard before appearing here and in Quality Inspection.
                           </p>
                           <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                             <button
@@ -348,47 +490,18 @@ export default function YarnInventoryPage() {
                               className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
                             >
                               <Scan className="h-3.5 w-3.5 text-teal-400" />
-                              <span>Scan Barcode</span>
+                              <span>Scan Barcode Modal</span>
                             </button>
-                            <span className="text-[11px] text-slate-400">or try e.g. <span className="font-mono font-semibold text-slate-600">VAS-QR-Y050</span></span>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : displayedBatches.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="py-12 text-center text-slate-500">
-                        <div className="max-w-md mx-auto flex flex-col items-center">
-                          <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-3">
-                            <AlertTriangle className="h-6 w-6" />
-                          </div>
-                          <h3 className="text-sm font-bold text-slate-900">No Yarn Batch Found</h3>
-                          <p className="text-xs text-slate-500 mt-1">
-                            No batch matches barcode <span className="font-mono font-bold text-slate-800">"{manualBarcode}"</span>.
-                          </p>
-                          <div className="mt-4 flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setUnrecognizedCode(manualBarcode);
-                                setIsRegisterOpen(true);
-                              }}
-                              className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                            >
-                              <PlusCircle className="h-3.5 w-3.5" />
-                              <span>Register New Batch</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setManualBarcode('');
-                                setSelectedBatch(null);
-                                setSelectedRackId(null);
-                              }}
-                              className="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-medium transition-colors"
-                            >
-                              Clear
-                            </button>
+                            {unscannedBatches.slice(0, 3).map((b) => (
+                              <button
+                                key={b.id}
+                                type="button"
+                                onClick={() => handleIntakeBatch(b)}
+                                className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded text-xs font-mono font-semibold"
+                              >
+                                + {b.barcode}
+                              </button>
+                            ))}
                           </div>
                         </div>
                       </td>
@@ -491,6 +604,16 @@ export default function YarnInventoryPage() {
                           </td>
                           <td className="py-3.5 px-4 text-center">
                             <div className="flex items-center justify-center gap-1.5">
+                              {/* QC Inspection Link */}
+                              <Link
+                                href="/quality-inspector"
+                                className="px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded text-xs font-semibold flex items-center gap-1 transition-colors"
+                                title="Inspect in Quality Inspection"
+                              >
+                                <ShieldCheck className="h-3 w-3 text-teal-600" />
+                                <span>QC</span>
+                              </Link>
+
                               {/* Quick Issue / Receive Button */}
                               <button
                                 type="button"
@@ -511,6 +634,21 @@ export default function YarnInventoryPage() {
                               >
                                 <Printer className="h-3.5 w-3.5" />
                               </button>
+
+                              {/* Remove from In-Take option */}
+                              {batch.intake_scanned && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveIntake(batch.id);
+                                  }}
+                                  className="p-1.5 border border-rose-200 hover:bg-rose-50 text-rose-500 rounded transition-colors"
+                                  title="Remove from Dashboard In-Take"
+                                >
+                                  ✕
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -527,13 +665,12 @@ export default function YarnInventoryPage() {
       <BarcodeScannerModal
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
-        onBatchFound={(batch) => {
-          setManualBarcode(batch.barcode);
+        onBatchFound={async (batch) => {
+          await handleIntakeBatch(batch);
           setSelectedBatch(batch);
           if (batch.storage_location) {
             setSelectedRackId(batch.storage_location);
           }
-          setSelectedBatchForAction(batch);
         }}
         onRegisterNew={(code) => {
           setUnrecognizedCode(code);

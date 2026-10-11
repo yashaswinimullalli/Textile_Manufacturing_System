@@ -124,6 +124,17 @@ export default function ProductionOrdersPage() {
     }
   };
 
+  const handleClearAllOrders = async () => {
+    if (!confirm('Are you sure you want to clear all production orders? The dashboard will stay clean until a new production CSV file is provided.')) return;
+    try {
+      const res = await api.deleteAllOrders();
+      setToastMessage(`Cleaned up ${res.count} production orders. Database is clean.`);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to remove orders.');
+    }
+  };
+
   const flaggedOrders = orders.filter((o) => o.is_flagged_for_review);
 
   const filteredOrders = orders.filter((o) => {
@@ -173,6 +184,17 @@ export default function ProductionOrdersPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          {orders.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearAllOrders}
+              className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 border border-rose-200"
+              title="Remove all orders until a new production CSV file is provided"
+            >
+              <span>Clear Orders ({orders.length})</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setShowUploadModal(true)}
@@ -311,14 +333,10 @@ export default function ProductionOrdersPage() {
                   <td colSpan={9} className="py-14 text-center text-slate-500">
                     <ClipboardList className="h-10 w-10 mx-auto text-slate-300 mb-3" />
                     <p className="font-bold text-slate-800 text-base">
-                      {hideDemoOrders && demoOrders.length > 0 && realOrders.length === 0
-                        ? 'Default Demo Orders Hidden'
-                        : 'No Production Orders Found'}
+                      No Production Orders Loaded
                     </p>
                     <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                      {hideDemoOrders && demoOrders.length > 0 && realOrders.length === 0
-                        ? 'The 50 default demo orders are hidden. Import your client placed orders to reflect them in this dashboard.'
-                        : 'Create an order or upload a spreadsheet manifest to begin production scheduling.'}
+                      The database has been cleaned. Please import your client placed production order spreadsheet (.xlsx or .csv) to reflect data dynamically across Production, Machines, Quality Inspector, and Dispatch.
                     </p>
                     <div className="mt-4 flex items-center justify-center gap-3">
                       <button
@@ -327,17 +345,8 @@ export default function ProductionOrdersPage() {
                         className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-2 shadow-xs"
                       >
                         <FileSpreadsheet className="h-4 w-4" />
-                        <span>⚡ Import 200 Production Orders</span>
+                        <span>⚡ Import Orders Manifest (CSV / Excel)</span>
                       </button>
-                      {demoOrders.length > 0 && hideDemoOrders && (
-                        <button
-                          type="button"
-                          onClick={() => setHideDemoOrders(false)}
-                          className="px-3.5 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition-colors"
-                        >
-                          Show Demo Orders ({demoOrders.length})
-                        </button>
-                      )}
                     </div>
                   </td>
                 </tr>

@@ -23,6 +23,8 @@ import {
   Sparkles,
   LayoutGrid,
   List,
+  FileText,
+  User,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
@@ -60,10 +62,12 @@ export default function QualityInspectionsPage() {
     if (!isBackground) setLoading(true);
     try {
       const [batchList, inspList] = await Promise.all([
-        api.getYarnBatches(),
+        api.getYarnBatches({ intake_scanned: true }),
         api.getQualityInspections(),
       ]);
-      setBatches(batchList);
+      // Only include raw materials that have been taken/scanned via barcode into the Storekeeper dashboard
+      const scannedBatches = batchList.filter((b) => b.intake_scanned === true);
+      setBatches(scannedBatches);
       setInspections(inspList);
     } catch (err) {
       console.error('Failed to load quality data', err);
@@ -121,29 +125,29 @@ export default function QualityInspectionsPage() {
   const passedBatches = batches.filter((b) => b.inspection_status === 'PASSED');
   const rejectedBatches = batches.filter((b) => b.inspection_status === 'REJECTED');
 
-  // ONLY display batch when barcode is given; remove default ones
+  // Display all batches in-taken into the system; filter by activeBarcode if provided
   const filteredAllBatches = React.useMemo(() => {
-    if (!activeBarcode) {
-      return [];
+    let list = [...batches];
+
+    if (activeBarcode) {
+      list = list.filter((b) => {
+        const matchBarcode = b.barcode?.toLowerCase().includes(activeBarcode);
+        const matchBatchCode = b.batch_code?.toLowerCase().includes(activeBarcode);
+        const matchSupplier = b.supplier?.toLowerCase().includes(activeBarcode);
+        const matchColour = b.colour?.toLowerCase().includes(activeBarcode);
+        const matchId = String(b.id).toLowerCase() === activeBarcode;
+        return matchBarcode || matchBatchCode || matchSupplier || matchColour || matchId;
+      });
     }
 
-    return batches.filter((b) => {
-      const matchBarcode = b.barcode?.toLowerCase().includes(activeBarcode);
-      const matchBatchCode = b.batch_code?.toLowerCase().includes(activeBarcode);
-      const matchSupplier = b.supplier?.toLowerCase().includes(activeBarcode);
-      const matchColour = b.colour?.toLowerCase().includes(activeBarcode);
-      const matchId = String(b.id).toLowerCase() === activeBarcode;
+    if (yarnTypeFilter !== 'ALL') {
+      list = list.filter((b) => b.yarn_type === yarnTypeFilter);
+    }
+    if (statusFilter !== 'ALL') {
+      list = list.filter((b) => (b.inspection_status || 'PENDING_INSPECTION') === statusFilter);
+    }
 
-      if (!(matchBarcode || matchBatchCode || matchSupplier || matchColour || matchId)) {
-        return false;
-      }
-
-      if (yarnTypeFilter !== 'ALL' && b.yarn_type !== yarnTypeFilter) return false;
-      const status = b.inspection_status || 'PENDING_INSPECTION';
-      if (statusFilter !== 'ALL' && status !== statusFilter) return false;
-
-      return true;
-    });
+    return list;
   }, [batches, activeBarcode, yarnTypeFilter, statusFilter]);
 
   const totalReceivedKg = batches.reduce((sum, b) => sum + b.quantity_received, 0);
@@ -161,13 +165,19 @@ export default function QualityInspectionsPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-slate-900">Yarn Inspection</h1>
+                <h1 className="text-2xl font-bold text-slate-900">Yarn Inspection & Quality Reports</h1>
                 <span className="bg-teal-100 text-teal-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                  {activeBarcode ? `${filteredAllBatches.length} Lot${filteredAllBatches.length === 1 ? '' : 's'} Matched` : 'Enter Barcode to Inspect'}
+                  {activeBarcode ? `${filteredAllBatches.length} Matched` : `${filteredAllBatches.length} In-Taken Lots`}
                 </span>
+                {pendingBatches.length > 0 && (
+                  <span className="bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {pendingBatches.length} Pending Inspector Review
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Manual visual inspection checklists, ASTM/ISO laboratory verification, and release disposition.
+                Official physical inspection checklists, ASTM/ISO laboratory verification, and certified quality release reports.
               </p>
             </div>
           </div>
@@ -192,6 +202,20 @@ export default function QualityInspectionsPage() {
             </button>
           </form>
 
+          {pendingBatches.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setInspectingBatch(pendingBatches[0]);
+                setIsReinspectionMode(false);
+              }}
+              className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              <span>Inspect Next Pending ({pendingBatches[0].batch_code})</span>
+            </button>
+          )}
+
           <Link
             href="/storekeeper/inventory"
             className="px-3.5 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
@@ -207,6 +231,58 @@ export default function QualityInspectionsPage() {
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
+        </div>
+      </div>
+
+      {/* Quick Overview Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs">
+          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">In-Taken Lots</span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-bold text-slate-900 font-mono">{batches.length}</span>
+            <span className="text-[11px] text-slate-400 font-medium">In Warehouse</span>
+          </div>
+        </div>
+
+        <div className={`bg-white rounded-xl border p-3.5 shadow-xs ${pendingBatches.length > 0 ? 'border-amber-300 ring-1 ring-amber-100 bg-amber-50/20' : 'border-slate-200'}`}>
+          <span className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider block">Needs Inspection</span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-bold text-amber-800 font-mono">{pendingBatches.length}</span>
+            {pendingBatches.length > 0 ? (
+              <span className="text-[10px] text-amber-600 font-bold bg-amber-100 px-1.5 py-0.5 rounded">Action Req.</span>
+            ) : (
+              <span className="text-[10px] text-emerald-600 font-bold">All Checked</span>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs">
+          <span className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider block">Passed & Released</span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-bold text-emerald-800 font-mono">{passedBatches.length}</span>
+            <span className="text-[11px] text-emerald-600 font-medium font-mono">{totalApprovedKg.toLocaleString()} kg</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs">
+          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">On Hold / Quarantined</span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-bold text-amber-700 font-mono">{onHoldBatches.length}</span>
+            <span className="text-[11px] text-slate-400 font-medium">Under Review</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs col-span-2 sm:col-span-1">
+          <span className="text-[11px] font-semibold text-teal-700 uppercase tracking-wider block">Official Reports</span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-bold text-teal-900 font-mono">{inspections.length}</span>
+            <button
+              onClick={() => setViewMode(viewMode === 'history' ? 'registry' : 'history')}
+              className="text-[11px] text-teal-600 hover:text-teal-800 font-bold hover:underline"
+            >
+              {viewMode === 'history' ? '← Registry' : 'Audit Trail →'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -291,7 +367,7 @@ export default function QualityInspectionsPage() {
               <span className="text-xs text-slate-500 hidden sm:inline">
                 {activeBarcode
                   ? `Showing ${filteredAllBatches.length} matched lot${filteredAllBatches.length === 1 ? '' : 's'}`
-                  : 'Enter Barcode to View'}
+                  : `Showing ${filteredAllBatches.length} in-taken lot${filteredAllBatches.length === 1 ? '' : 's'}`}
               </span>
 
               {/* View Layout Toggle */}
@@ -337,22 +413,29 @@ export default function QualityInspectionsPage() {
           {/* CARD FORMAT (DEFAULT) */}
           {layoutMode === 'cards' && (
             <div>
-              {!activeBarcode ? (
+              {batches.length === 0 ? (
                 <div className="bg-slate-50/70 rounded-xl border border-dashed border-slate-300 p-12 text-center space-y-3">
                   <div className="p-3 bg-teal-50 text-teal-700 w-12 h-12 rounded-xl mx-auto flex items-center justify-center">
-                    <Scan className="h-6 w-6" />
+                    <Boxes className="h-6 w-6" />
                   </div>
-                  <p className="text-sm font-bold text-slate-800">Scan or Enter Barcode to Inspect Lot</p>
+                  <p className="text-sm font-bold text-slate-800">No Raw Materials In-Taken in Warehouse</p>
                   <p className="text-xs text-slate-500 max-w-md mx-auto">
-                    Default lots are hidden. Enter or scan a barcode (e.g. <code className="font-mono font-bold text-slate-700">VAS-QR-Y050</code> or <code className="font-mono font-bold text-slate-700">VAS-DEMO-Y001</code>) above to view and inspect its quality report.
+                    Incoming raw materials must first be scanned and in-taken by the Storekeeper in the Inventory Warehouse dashboard before quality inspection can be performed.
                   </p>
+                  <Link
+                    href="/storekeeper/inventory"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 shadow-xs mt-2"
+                  >
+                    <Boxes className="h-3.5 w-3.5 text-teal-400" />
+                    <span>Go to Storekeeper Inventory</span>
+                  </Link>
                 </div>
               ) : filteredAllBatches.length === 0 ? (
                 <div className="bg-slate-50/70 rounded-xl border border-dashed border-slate-300 p-12 text-center space-y-2">
                   <Boxes className="h-8 w-8 text-slate-400 mx-auto" />
-                  <p className="text-sm font-semibold text-slate-700">No yarn batches matched "{activeBarcode}"</p>
+                  <p className="text-sm font-semibold text-slate-700">No yarn batches matched your search / filters</p>
                   <p className="text-xs text-slate-500">
-                    Verify the barcode number or enter another lot code.
+                    Verify the barcode or clear the current filters.
                   </p>
                   <button
                     type="button"
@@ -364,17 +447,32 @@ export default function QualityInspectionsPage() {
                     }}
                     className="mt-2 px-3 py-1 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 shadow-xs"
                   >
-                    Clear Search
+                    Clear Search & Filters
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
                   {filteredAllBatches.map((b) => {
                     const status = b.inspection_status || 'PENDING_INSPECTION';
                     const isPassed = status === 'PASSED';
                     const isPending = status === 'PENDING_INSPECTION';
                     const isOnHold = status === 'ON_HOLD';
                     const isRejected = status === 'REJECTED';
+
+                    // Find latest inspection report for this batch
+                    const batchInspections = inspections
+                      .filter(
+                        (i) =>
+                          String(i.batch_id) === String(b.id) ||
+                          (i.batch_code && b.batch_code && i.batch_code.toLowerCase() === b.batch_code.toLowerCase()) ||
+                          (i.barcode && b.barcode && i.barcode.toLowerCase() === b.barcode.toLowerCase())
+                      )
+                      .sort(
+                        (x, y) =>
+                          new Date(y.created_at || y.inspection_date).getTime() -
+                          new Date(x.created_at || x.inspection_date).getTime()
+                      );
+                    const latestInsp = batchInspections[0];
 
                     return (
                       <div
@@ -387,20 +485,27 @@ export default function QualityInspectionsPage() {
                             : 'border-slate-200'
                         }`}
                       >
-                        <div>
+                        <div className="space-y-3">
                           {/* Top row: Batch ID & QC Status */}
-                          <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex items-start justify-between gap-2">
                             <div>
-                              <h4 className="font-mono font-bold text-sm text-slate-900">
-                                {b.batch_code}
-                              </h4>
-                              <span className="text-[11px] font-mono text-slate-400">
-                                {b.barcode}
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="font-mono font-bold text-sm text-slate-900">
+                                  {b.batch_code}
+                                </h4>
+                                {b.intake_scanned && (
+                                  <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-mono">
+                                    In-Taken
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[11px] font-mono text-slate-400 block mt-0.5">
+                                Barcode: <strong className="text-slate-600">{b.barcode}</strong>
                               </span>
                             </div>
 
                             <span
-                              className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                              className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full ${
                                 isPassed
                                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                   : isPending
@@ -414,98 +519,170 @@ export default function QualityInspectionsPage() {
                               {isPending && <Clock className="h-3 w-3 text-amber-600" />}
                               {isOnHold && <AlertTriangle className="h-3 w-3 text-amber-600" />}
                               {isRejected && <XCircle className="h-3 w-3 text-rose-600" />}
-                              <span>{isPending ? 'Pending' : status.replace('_', ' ')}</span>
+                              <span>{isPending ? 'Pending Inspection' : status.replace('_', ' ')}</span>
                             </span>
                           </div>
 
                           {/* Yarn & Supplier info */}
-                          <div className="space-y-1 mb-3">
-                            <div className="text-xs font-semibold text-slate-800">
+                          <div className="space-y-1 bg-slate-50/60 p-2.5 rounded-lg border border-slate-100">
+                            <div className="text-xs font-bold text-slate-800">
                               {b.yarn_type} • {b.colour}
                             </div>
                             <div className="text-[11px] text-slate-500 flex items-center justify-between">
-                              <span className="truncate pr-1">{b.supplier}</span>
+                              <span className="truncate pr-1">Supplier: <strong>{b.supplier}</strong></span>
                               {b.yarn_count_spec && (
-                                <span className="font-mono text-slate-400 flex-shrink-0 text-[10px]">
+                                <span className="font-mono text-slate-500 flex-shrink-0 text-[10px]">
                                   {b.yarn_count_spec}
                                 </span>
                               )}
                             </div>
-                          </div>
-
-                          {/* Quantity row */}
-                          <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                            <span className="text-slate-400 text-[11px]">Quantity</span>
-                            <div className="text-right font-mono">
-                              {isPending ? (
-                                <span className="font-bold text-amber-700">
-                                  {b.quantity_received.toLocaleString()} {b.unit}
-                                </span>
-                              ) : isOnHold ? (
-                                <div>
-                                  <span className="font-bold text-amber-800">
-                                    {(b.quantity_held || b.quantity_received).toLocaleString()} {b.unit}
-                                  </span>
-                                  <span className="text-[10px] text-amber-600 block font-sans">
-                                    Under Quarantine
-                                  </span>
-                                </div>
-                              ) : (
-                                <div>
-                                  <span className="font-bold text-emerald-700">
-                                    {b.quantity_available.toLocaleString()} {b.unit}
-                                  </span>
-                                  <span className="text-[10px] text-slate-400 block font-sans">
-                                    Total: {b.quantity_received.toLocaleString()} {b.unit}
-                                  </span>
-                                </div>
-                              )}
+                            <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-200/60 font-mono">
+                              <span>Received: <strong>{b.quantity_received.toLocaleString()} {b.unit}</strong></span>
+                              <span className={b.quantity_available > 0 ? 'text-emerald-700 font-bold' : 'text-slate-400'}>
+                                Available: {b.quantity_available.toLocaleString()} {b.unit}
+                              </span>
                             </div>
                           </div>
+
+                          {/* INSPECTION REPORT CONTAINER */}
+                          {latestInsp ? (
+                            <div className="p-3 rounded-lg bg-teal-50/40 border border-teal-200/80 text-xs space-y-2">
+                              <div className="flex items-center justify-between border-b border-teal-200/60 pb-1.5">
+                                <span className="font-bold text-slate-800 flex items-center gap-1.5 text-[11px]">
+                                  <FileText className="h-3.5 w-3.5 text-teal-600" />
+                                  Inspection Report #{latestInsp.inspection_number || 1}
+                                </span>
+                                <span className="text-[10px] text-slate-500 font-mono">
+                                  {new Date(latestInsp.created_at || latestInsp.inspection_date).toLocaleDateString()}
+                                </span>
+                              </div>
+
+                              <div className="text-[11px] text-slate-700 flex items-center justify-between">
+                                <div className="flex items-center gap-1">
+                                  <User className="h-3 w-3 text-slate-400" />
+                                  <span>Inspector: <strong>{latestInsp.inspector_name}</strong></span>
+                                </div>
+                                <span
+                                  className={`text-[10px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                                    latestInsp.decision === 'PASSED'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : latestInsp.decision === 'ON_HOLD'
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-rose-100 text-rose-800'
+                                  }`}
+                                >
+                                  {latestInsp.decision}
+                                </span>
+                              </div>
+
+                              {/* Physical Inspection Checklist Results */}
+                              <div className="grid grid-cols-2 gap-1.5 text-[10px] bg-white/90 p-2 rounded border border-teal-100">
+                                <div>
+                                  <span className="text-slate-400">Packaging:</span>{' '}
+                                  <span className="font-semibold text-slate-700">{latestInsp.packaging_condition}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400">Contamination:</span>{' '}
+                                  <span className="font-semibold text-slate-700">{latestInsp.visible_contamination}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400">Colour Match:</span>{' '}
+                                  <span className="font-semibold text-slate-700">{latestInsp.colour_consistency}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400">Appearance:</span>{' '}
+                                  <span className="font-semibold text-slate-700">{latestInsp.yarn_appearance}</span>
+                                </div>
+                              </div>
+
+                              {/* Stock Disposition Row */}
+                              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-teal-100">
+                                <span className="text-slate-500">Released Stock:</span>
+                                <span className="font-mono font-bold text-emerald-700">
+                                  +{latestInsp.quantity_approved.toLocaleString()} {b.unit}
+                                </span>
+                              </div>
+
+                              {(latestInsp.visual_remarks || latestInsp.decision_reason) && (
+                                <p className="text-[10px] text-slate-600 italic border-l-2 border-teal-500 pl-1.5 truncate">
+                                  &ldquo;{latestInsp.visual_remarks || latestInsp.decision_reason}&rdquo;
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="p-3 rounded-lg bg-amber-50/70 border border-amber-200/80 text-xs space-y-2">
+                              <div className="flex items-center justify-between border-b border-amber-200/60 pb-1.5">
+                                <span className="font-bold text-amber-900 flex items-center gap-1.5 text-[11px]">
+                                  <Clock className="h-3.5 w-3.5 text-amber-600" />
+                                  Inspection Report: Pending
+                                </span>
+                                <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded">
+                                  In Quarantine
+                                </span>
+                              </div>
+
+                              <p className="text-[11px] text-amber-800 leading-relaxed">
+                                Raw material is in intake staging. Physical checklists and laboratory testing must be conducted by a certified inspector before release.
+                              </p>
+
+                              <div className="text-[10px] text-amber-700 bg-white/70 p-1.5 rounded border border-amber-200 flex items-center justify-between font-mono">
+                                <span>Awaiting Inspection:</span>
+                                <span className="font-bold">{b.quantity_received.toLocaleString()} {b.unit}</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Card Actions */}
                         <div className="pt-3 border-t border-slate-100 mt-3 flex items-center justify-between gap-2">
                           <button
+                            type="button"
                             onClick={() => setHistoryBatch(b)}
-                            className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 py-1"
+                            className="px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200 rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"
+                            title="View Full Inspection Report & History"
                           >
-                            <History className="h-3.5 w-3.5" />
-                            <span>History</span>
+                            <FileText className="h-3.5 w-3.5 text-teal-600" />
+                            <span>View Report</span>
                           </button>
 
                           {isPending ? (
                             <button
+                              type="button"
                               onClick={() => {
                                 setInspectingBatch(b);
                                 setIsReinspectionMode(false);
                               }}
-                              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+                              className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+                              title="Take detailed inspection by inspector"
                             >
-                              <ShieldCheck className="h-3.5 w-3.5 text-teal-400" />
-                              <span>Inspect</span>
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              <span>Take Detailed Inspection</span>
                             </button>
                           ) : isOnHold ? (
                             <button
+                              type="button"
                               onClick={() => {
                                 setInspectingBatch(b);
                                 setIsReinspectionMode(true);
                               }}
-                              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+                              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
+                              title="Reinspect held batch"
                             >
                               <RotateCcw className="h-3.5 w-3.5" />
-                              <span>Reinspect</span>
+                              <span>Take Reinspection</span>
                             </button>
                           ) : (
                             <button
+                              type="button"
                               onClick={() => {
                                 setInspectingBatch(b);
                                 setIsReinspectionMode(true);
                               }}
-                              className="px-2.5 py-1 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors border border-slate-200"
+                              className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                              title="Reinspect or update inspection by inspector"
                             >
-                              <RotateCcw className="h-3 w-3 text-slate-400" />
-                              <span>Reinspect</span>
+                              <RotateCcw className="h-3 w-3 text-teal-400" />
+                              <span>Reinspect Lot</span>
                             </button>
                           )}
                         </div>
@@ -529,104 +706,155 @@ export default function QualityInspectionsPage() {
                     <th className="py-3 px-3">Yarn Details</th>
                     <th className="py-3 px-3">Total Received</th>
                     <th className="py-3 px-3">QC Status</th>
+                    <th className="py-3 px-3">Latest Inspection Report</th>
                     <th className="py-3 px-3">Approved / Available</th>
                     <th className="py-3 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {!activeBarcode ? (
+                  {batches.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-slate-500">
-                        <Scan className="h-6 w-6 mx-auto mb-2 text-slate-400" />
-                        <p className="font-semibold text-slate-700">Enter a barcode above to display inspection records</p>
-                        <p className="text-xs text-slate-400 mt-1">Default batches are hidden until a barcode is provided.</p>
+                      <td colSpan={9} className="py-12 text-center text-slate-500">
+                        <Boxes className="h-6 w-6 mx-auto mb-2 text-slate-400" />
+                        <p className="font-semibold text-slate-700">No Raw Materials In-Taken in Warehouse</p>
+                        <p className="text-xs text-slate-400 mt-1">Please in-take raw materials via barcode in Storekeeper Inventory first.</p>
                       </td>
                     </tr>
                   ) : filteredAllBatches.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-slate-500">
+                      <td colSpan={9} className="py-12 text-center text-slate-500">
                         No batch found matching "{activeBarcode}".
                       </td>
                     </tr>
                   ) : (
                     filteredAllBatches.map((b) => {
-                    const status = b.inspection_status || 'PENDING_INSPECTION';
-                    const isPassed = status === 'PASSED';
-                    const isPending = status === 'PENDING_INSPECTION';
-                    const isOnHold = status === 'ON_HOLD';
-                    const isRejected = status === 'REJECTED';
+                      const status = b.inspection_status || 'PENDING_INSPECTION';
+                      const isPassed = status === 'PASSED';
+                      const isPending = status === 'PENDING_INSPECTION';
+                      const isOnHold = status === 'ON_HOLD';
+                      const isRejected = status === 'REJECTED';
 
-                    return (
-                      <tr key={b.id} className="hover:bg-slate-50/50">
-                        <td className="py-3 px-3 font-bold text-slate-900 font-mono">
-                          {b.batch_code}
-                        </td>
-                        <td className="py-3 px-3 font-mono text-slate-500">{b.barcode}</td>
-                        <td className="py-3 px-3 font-semibold text-slate-800">{b.supplier}</td>
-                        <td className="py-3 px-3 text-slate-600">
-                          {b.yarn_type} • {b.colour}
-                          {b.yarn_count_spec && (
-                            <span className="block text-[11px] text-slate-400 font-mono">
-                              {b.yarn_count_spec}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-3 font-semibold text-slate-900 font-mono">
-                          {b.quantity_received.toLocaleString()} {b.unit}
-                        </td>
-                        <td className="py-3 px-3">
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                              isPassed
-                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                : isPending
-                                ? 'bg-amber-100 text-amber-800 border border-amber-300 animate-pulse'
-                                : isOnHold
-                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                                : isRejected
-                                ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                                : 'bg-sky-100 text-sky-800 border border-sky-300'
-                            }`}
-                          >
-                            {status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 font-mono">
-                          <span
-                            className={`font-bold ${
-                              b.quantity_available > 0 ? 'text-emerald-700' : 'text-slate-400'
-                            }`}
-                          >
-                            {b.quantity_available.toLocaleString()} {b.unit}
-                          </span>
-                          {b.quantity_held ? (
-                            <span className="block text-[10px] text-amber-700 font-medium">
-                              {b.quantity_held}kg Held
-                            </span>
-                          ) : null}
-                        </td>
-                        <td className="py-3 px-3 text-right">
-                          <div className="inline-flex items-center gap-1.5">
-                            <button
-                              onClick={() => setHistoryBatch(b)}
-                              className="px-2.5 py-1 border rounded text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                      const batchInspections = inspections
+                        .filter(
+                          (i) =>
+                            String(i.batch_id) === String(b.id) ||
+                            (i.batch_code && b.batch_code && i.batch_code.toLowerCase() === b.batch_code.toLowerCase()) ||
+                            (i.barcode && b.barcode && i.barcode.toLowerCase() === b.barcode.toLowerCase())
+                        )
+                        .sort(
+                          (x, y) =>
+                            new Date(y.created_at || y.inspection_date).getTime() -
+                            new Date(x.created_at || x.inspection_date).getTime()
+                        );
+                      const latestInsp = batchInspections[0];
+
+                      return (
+                        <tr key={b.id} className="hover:bg-slate-50/50">
+                          <td className="py-3 px-3 font-bold text-slate-900 font-mono">
+                            {b.batch_code}
+                          </td>
+                          <td className="py-3 px-3 font-mono text-slate-500">{b.barcode}</td>
+                          <td className="py-3 px-3 font-semibold text-slate-800">{b.supplier}</td>
+                          <td className="py-3 px-3 text-slate-600">
+                            {b.yarn_type} • {b.colour}
+                            {b.yarn_count_spec && (
+                              <span className="block text-[11px] text-slate-400 font-mono">
+                                {b.yarn_count_spec}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 font-semibold text-slate-900 font-mono">
+                            {b.quantity_received.toLocaleString()} {b.unit}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                                isPassed
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                  : isPending
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-300 animate-pulse'
+                                  : isOnHold
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                  : isRejected
+                                  ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                  : 'bg-sky-100 text-sky-800 border border-sky-300'
+                              }`}
                             >
-                              History
-                            </button>
-                            <button
-                              onClick={() => {
-                                setInspectingBatch(b);
-                                setIsReinspectionMode(!isPending);
-                              }}
-                              className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded text-[11px] font-bold transition-colors shadow-xs"
+                              {status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            {latestInsp ? (
+                              <div className="space-y-0.5">
+                                <span className="font-bold text-slate-800 flex items-center gap-1 text-[11px]">
+                                  <FileText className="h-3 w-3 text-teal-600" />
+                                  Report #{latestInsp.inspection_number || 1} • {latestInsp.decision}
+                                </span>
+                                <span className="text-[10px] text-slate-500 block">
+                                  By {latestInsp.inspector_name} • {new Date(latestInsp.created_at || latestInsp.inspection_date).toLocaleDateString()}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                                <Clock className="h-3 w-3 text-amber-500" />
+                                Awaiting Inspector Check
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 font-mono">
+                            <span
+                              className={`font-bold ${
+                                b.quantity_available > 0 ? 'text-emerald-700' : 'text-slate-400'
+                              }`}
                             >
-                              {isPending ? 'Inspect' : 'Reinspect'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  }))}
+                              {b.quantity_available.toLocaleString()} {b.unit}
+                            </span>
+                            {b.quantity_held ? (
+                              <span className="block text-[10px] text-amber-700 font-medium">
+                                {b.quantity_held}kg Held
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setHistoryBatch(b)}
+                                className="px-2.5 py-1 border border-slate-200 rounded text-[11px] font-semibold text-slate-600 hover:bg-slate-100 flex items-center gap-1 transition-colors"
+                              >
+                                <FileText className="h-3 w-3 text-teal-600" />
+                                <span>Report</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setInspectingBatch(b);
+                                  setIsReinspectionMode(!isPending);
+                                }}
+                                className={`px-2.5 py-1 rounded text-[11px] font-bold transition-colors shadow-xs flex items-center gap-1 ${
+                                  isPending
+                                    ? 'bg-teal-600 hover:bg-teal-700 text-white'
+                                    : 'bg-slate-900 hover:bg-slate-800 text-white'
+                                }`}
+                              >
+                                {isPending ? (
+                                  <>
+                                    <ShieldCheck className="h-3 w-3" />
+                                    <span>Take Inspection</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <RotateCcw className="h-3 w-3 text-teal-400" />
+                                    <span>Reinspect</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>

@@ -334,63 +334,7 @@ let localMovements: StockMovement[] = [
   },
 ];
 
-let localOrders: ProductionOrder[] = [
-  {
-    id: 'ord-1',
-    order_no: 'PO-2026-101',
-    customer_reference: 'Zara Global Retail (Summer Twill)',
-    fabric_type: '100% Combed Cotton Twill 180 GSM',
-    target_quantity: 5000,
-    produced_quantity: 3600,
-    required_yarn_quantity: 2200,
-    due_date: '2026-10-18',
-    status: 'In Progress',
-    is_flagged_for_review: true,
-    flag_reason: 'Machine M-03 entered Stopped state (Warp breakage) — review schedule impact.',
-    assigned_machine_code: 'M-01, M-03',
-    created_at: '2026-10-02T08:00:00Z',
-  },
-  {
-    id: 'ord-2',
-    order_no: 'PO-2026-102',
-    customer_reference: 'H&M Knitwear Division',
-    fabric_type: 'Poly-Cotton Single Jersey 160 GSM',
-    target_quantity: 3000,
-    produced_quantity: 1200,
-    required_yarn_quantity: 1400,
-    due_date: '2026-10-14', // Approaching deadline
-    status: 'In Progress',
-    is_flagged_for_review: false,
-    assigned_machine_code: 'M-02',
-    created_at: '2026-10-03T09:30:00Z',
-  },
-  {
-    id: 'ord-3',
-    order_no: 'PO-2026-103',
-    customer_reference: 'Marks & Spencer Workwear',
-    fabric_type: 'Poly Oxford Heavy Duty 240 GSM',
-    target_quantity: 4000,
-    produced_quantity: 0,
-    required_yarn_quantity: 1900,
-    due_date: '2026-10-25',
-    status: 'Planned',
-    is_flagged_for_review: false,
-    created_at: '2026-10-08T11:00:00Z',
-  },
-  {
-    id: 'ord-4',
-    order_no: 'PO-2026-098',
-    customer_reference: 'Decathlon Sportswear',
-    fabric_type: 'Micro Polyester Interlock',
-    target_quantity: 2500,
-    produced_quantity: 2500,
-    required_yarn_quantity: 1100,
-    due_date: '2026-10-09',
-    status: 'Completed',
-    is_flagged_for_review: false,
-    created_at: '2026-09-28T10:00:00Z',
-  },
-];
+let localOrders: ProductionOrder[] = [];
 
 let localMachines: Machine[] = [
   {
@@ -474,28 +418,7 @@ let localEvents: MachineEvent[] = [
   },
 ];
 
-let localRecords: ProductionRecord[] = [
-  {
-    id: 'rec-1',
-    order_id: 'ord-1',
-    order_no: 'PO-2026-101',
-    machine_id: 'mach-1',
-    machine_code: 'M-01 (Picanol Airjet Loom)',
-    operator_name: 'Rajesh Kumar',
-    quantity_produced: 450,
-    recorded_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'rec-2',
-    order_id: 'ord-2',
-    order_no: 'PO-2026-102',
-    machine_id: 'mach-2',
-    machine_code: 'M-02 (Toyota JAT810 Loom)',
-    operator_name: 'Sunil Verma',
-    quantity_produced: 300,
-    recorded_at: new Date(Date.now() - 85 * 60 * 1000).toISOString(),
-  },
-];
+let localRecords: ProductionRecord[] = [];
 
 
 // Helper to fetch from backend via Axios or fall back gracefully
@@ -531,9 +454,20 @@ async function fetchWithFallback<T>(endpoint: string, options?: RequestInit, fal
 
 export const api = {
   // STOREKEEPER: YARN INVENTORY
-  async getYarnBatches(filters?: { yarn_type?: string; colour?: string; low_stock?: boolean; search?: string }): Promise<YarnBatch[]> {
-    return fetchWithFallback('/yarn-batches', undefined, () => {
+  async getYarnBatches(filters?: { yarn_type?: string; colour?: string; low_stock?: boolean; search?: string; intake_scanned?: boolean }): Promise<YarnBatch[]> {
+    const query = new URLSearchParams();
+    if (filters?.yarn_type) query.set('yarn_type', filters.yarn_type);
+    if (filters?.colour) query.set('colour', filters.colour);
+    if (filters?.low_stock) query.set('low_stock', 'true');
+    if (filters?.search) query.set('search', filters.search);
+    if (filters?.intake_scanned !== undefined) query.set('intake_scanned', String(filters.intake_scanned));
+    const endpoint = `/yarn-batches${query.toString() ? `?${query.toString()}` : ''}`;
+
+    return fetchWithFallback(endpoint, undefined, () => {
       let filtered = [...localBatches];
+      if (filters?.intake_scanned !== undefined) {
+        filtered = filtered.filter(b => Boolean(b.intake_scanned) === filters.intake_scanned);
+      }
       if (filters?.yarn_type && filters.yarn_type !== 'ALL') {
         filtered = filtered.filter(b => b.yarn_type.toLowerCase() === filters.yarn_type?.toLowerCase());
       }
@@ -549,6 +483,58 @@ export const api = {
         );
       }
       return filtered;
+    });
+  },
+
+  async markBatchScanned(idOrBarcode: string): Promise<YarnBatch> {
+    return fetchWithFallback(`/yarn-batches/${encodeURIComponent(idOrBarcode.trim())}/intake-scan`, {
+      method: 'POST',
+    }, () => {
+      const b = localBatches.find(x => x.id === idOrBarcode || x.barcode === idOrBarcode || x.batch_code === idOrBarcode);
+      if (b) {
+        b.intake_scanned = true;
+        return b;
+      }
+      throw new Error(`Batch ${idOrBarcode} not found`);
+    });
+  },
+
+  async unmarkBatchScanned(idOrBarcode: string): Promise<YarnBatch> {
+    return fetchWithFallback(`/yarn-batches/${encodeURIComponent(idOrBarcode.trim())}/intake-scan`, {
+      method: 'DELETE',
+    }, () => {
+      const b = localBatches.find(x => x.id === idOrBarcode || x.barcode === idOrBarcode || x.batch_code === idOrBarcode);
+      if (b) {
+        b.intake_scanned = false;
+        return b;
+      }
+      throw new Error(`Batch ${idOrBarcode} not found`);
+    });
+  },
+
+  async quickAddYarnBatch(): Promise<YarnBatch> {
+    return fetchWithFallback('/yarn-batches/quick-add', {
+      method: 'POST',
+    }, () => {
+      const uniqueSuffix = Math.floor(10 + Math.random() * 90);
+      const newBatch: YarnBatch = {
+        id: `batch-${Date.now()}`,
+        batch_code: `VAS-DEMO-Y${uniqueSuffix}`,
+        barcode: `VAS-QR-Y${uniqueSuffix}`,
+        yarn_type: 'Cotton',
+        colour: 'Egyptian White',
+        supplier: 'Al-Amal Cotton Mills',
+        quantity_received: 500,
+        quantity_available: 500,
+        unit: 'kg',
+        reorder_threshold: 100,
+        inspection_status: 'PENDING_INSPECTION',
+        intake_scanned: false,
+        received_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+      };
+      localBatches.push(newBatch);
+      return newBatch;
     });
   },
 
@@ -909,6 +895,24 @@ export const api = {
     );
   },
 
+  async deleteAllOrders(): Promise<{ success: boolean; count: number; message: string }> {
+    return fetchWithFallback(
+      '/orders/all',
+      {
+        method: 'DELETE',
+      },
+      () => {
+        const initialCount = localOrders.length;
+        localOrders = [];
+        return {
+          success: true,
+          count: initialCount,
+          message: `Cleaned up ${initialCount} orders.`,
+        };
+      }
+    );
+  },
+
   async updateOrderStatus(orderId: string, status: 'Planned' | 'In Progress' | 'On Hold' | 'Completed'): Promise<ProductionOrder> {
     return fetchWithFallback(
       `/orders/${orderId}/status`,
@@ -990,6 +994,32 @@ export const api = {
         mach.current_status = 'Running';
         mach.updated_at = new Date().toISOString();
         return { ...mach };
+      }
+    );
+  },
+
+  async assignBatchMachines(payload: { machine_ids: string[]; order_ids?: string[] }): Promise<{ success: boolean; count: number; message: string }> {
+    return fetchWithFallback(
+      '/machines/assign-batch',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+      () => {
+        let count = 0;
+        for (const mId of payload.machine_ids) {
+          const mach = localMachines.find(m => m.id === mId || m.machine_code.toLowerCase().includes(mId.toLowerCase()));
+          if (!mach) continue;
+          const unassignedOrder = localOrders.find(o => !localMachines.some(m => m.active_order_id === o.id));
+          if (unassignedOrder) {
+            mach.active_order_id = unassignedOrder.id;
+            mach.active_order_no = unassignedOrder.order_no;
+            mach.current_status = 'Running';
+            unassignedOrder.status = 'In Progress';
+            count++;
+          }
+        }
+        return { success: true, count, message: `Assigned ${count} machines.` };
       }
     );
   },

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useReducer, useCallback } from 'react';
+import React, { useReducer, useCallback, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2,
@@ -16,7 +16,11 @@ import {
   Search,
   Circle,
   Layers,
+  Boxes,
+  ArrowRight,
+  ExternalLink,
 } from 'lucide-react';
+import { api } from '@/lib/api-client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,61 +35,17 @@ interface InspectionRecord {
   inspector: string; date: string;
 }
 interface StageInspection { stageId: StageId; status: InspectionStatus; records: InspectionRecord[]; }
-interface YarnRoll { code: string; name: string; weight: string; color: string; customer: string; orderRef: string; }
-
-// ─── 50 Yarn Types ────────────────────────────────────────────────────────────
-const YARN_ROLLS: YarnRoll[] = [
-  { code: 'YRN-001', name: '100% Combed Cotton', weight: '40s Ne', color: 'Natural White', customer: 'Arvind Ltd', orderRef: 'ORD-2026-001' },
-  { code: 'YRN-002', name: 'Raw Indigo Denim', weight: '7 Oz', color: 'Indigo Blue', customer: "Levi's India", orderRef: 'ORD-2026-002' },
-  { code: 'YRN-003', name: 'Mulberry Silk Chiffon', weight: '8mm', color: 'Pearl', customer: 'Raymond Luxury', orderRef: 'ORD-2026-003' },
-  { code: 'YRN-004', name: 'Pure Organic Linen', weight: '40 GSM', color: 'Ecru', customer: 'Fab India', orderRef: 'ORD-2026-004' },
-  { code: 'YRN-005', name: 'Cotton Twill 240 GSM', weight: '240 GSM', color: 'Off White', customer: 'Pantaloons', orderRef: 'ORD-2026-005' },
-  { code: 'YRN-006', name: 'Poly-Cotton Poplin', weight: '110 GSM', color: 'Sky Blue', customer: 'Van Heusen', orderRef: 'ORD-2026-006' },
-  { code: 'YRN-007', name: 'Modal Satin Blend', weight: '130 GSM', color: 'Ivory', customer: 'H&M India', orderRef: 'ORD-2026-007' },
-  { code: 'YRN-008', name: 'Oxford Weave Cotton', weight: '170 GSM', color: 'Classic White', customer: 'Allen Solly', orderRef: 'ORD-2026-008' },
-  { code: 'YRN-009', name: 'Bamboo Jersey Knit', weight: '180 GSM', color: 'Charcoal', customer: 'Westside', orderRef: 'ORD-2026-009' },
-  { code: 'YRN-010', name: 'Viscose Georgette', weight: '60 GSM', color: 'Blush Pink', customer: 'W for Woman', orderRef: 'ORD-2026-010' },
-  { code: 'YRN-011', name: 'Tencel Lyocell', weight: '145 GSM', color: 'Sage Green', customer: 'Forest Essentials', orderRef: 'ORD-2026-011' },
-  { code: 'YRN-012', name: 'Merino Wool Crepe', weight: '190 GSM', color: 'Camel', customer: 'Manyavar', orderRef: 'ORD-2026-012' },
-  { code: 'YRN-013', name: 'Dupion Silk', weight: '60mm', color: 'Gold', customer: 'Kalyan Silks', orderRef: 'ORD-2026-013' },
-  { code: 'YRN-014', name: 'Canvas Duck Cotton', weight: '380 GSM', color: 'Khaki', customer: 'Woodland', orderRef: 'ORD-2026-014' },
-  { code: 'YRN-015', name: 'Flannel Brushed Cotton', weight: '200 GSM', color: 'Red Check', customer: 'Blackberrys', orderRef: 'ORD-2026-015' },
-  { code: 'YRN-016', name: 'Linen Viscose Blend', weight: '135 GSM', color: 'Stone', customer: 'Biba', orderRef: 'ORD-2026-016' },
-  { code: 'YRN-017', name: 'Cotton Lawn 60s', weight: '60 GSM', color: 'Floral Print', customer: 'Global Desi', orderRef: 'ORD-2026-017' },
-  { code: 'YRN-018', name: 'Ripstop Nylon', weight: '70D', color: 'Olive Green', customer: 'Quechua', orderRef: 'ORD-2026-018' },
-  { code: 'YRN-019', name: 'Jacquard Brocade', weight: '250 GSM', color: 'Deep Red', customer: 'Sabyasachi', orderRef: 'ORD-2026-019' },
-  { code: 'YRN-020', name: 'Dobby Voile Cotton', weight: '65 GSM', color: 'Light Blue', customer: 'Libas', orderRef: 'ORD-2026-020' },
-  { code: 'YRN-021', name: 'Terry Towel Loop', weight: '450 GSM', color: 'White', customer: 'Trident Towels', orderRef: 'ORD-2026-021' },
-  { code: 'YRN-022', name: 'Herringbone Wool', weight: '280 GSM', color: 'Charcoal Grey', customer: 'Park Avenue', orderRef: 'ORD-2026-022' },
-  { code: 'YRN-023', name: 'Pique Polo Knit', weight: '200 GSM', color: 'Navy Blue', customer: 'Louis Philippe', orderRef: 'ORD-2026-023' },
-  { code: 'YRN-024', name: 'Seersucker Stripe', weight: '100 GSM', color: 'Blue White Stripe', customer: 'Arrow', orderRef: 'ORD-2026-024' },
-  { code: 'YRN-025', name: 'Rib Knit 1x1', weight: '160 GSM', color: 'Black', customer: 'Zara India', orderRef: 'ORD-2026-025' },
-  { code: 'YRN-026', name: 'Velvet Crushed', weight: '350 GSM', color: 'Royal Purple', customer: 'Ritu Kumar', orderRef: 'ORD-2026-026' },
-  { code: 'YRN-027', name: 'Muslin Unbleached', weight: '80 GSM', color: 'Natural', customer: 'Fabrics Empire', orderRef: 'ORD-2026-027' },
-  { code: 'YRN-028', name: 'Chambray Light', weight: '120 GSM', color: 'Light Denim', customer: 'DNMX', orderRef: 'ORD-2026-028' },
-  { code: 'YRN-029', name: 'Ottoman Rib Weave', weight: '220 GSM', color: 'Forest Green', customer: 'Aurelia', orderRef: 'ORD-2026-029' },
-  { code: 'YRN-030', name: 'Organza Silk', weight: '30mm', color: 'Champagne', customer: 'Anita Dongre', orderRef: 'ORD-2026-030' },
-  { code: 'YRN-031', name: 'Corduroy 14W', weight: '310 GSM', color: 'Tan Brown', customer: 'Pepe Jeans', orderRef: 'ORD-2026-031' },
-  { code: 'YRN-032', name: 'Stretch Denim 2%', weight: '310 GSM', color: 'Dark Wash', customer: 'Wrangler India', orderRef: 'ORD-2026-032' },
-  { code: 'YRN-033', name: 'Madras Cotton Check', weight: '110 GSM', color: 'Multicheck', customer: 'Celio India', orderRef: 'ORD-2026-033' },
-  { code: 'YRN-034', name: 'Banarasi Silk Brocade', weight: '300 GSM', color: 'Magenta Gold', customer: 'Taneira', orderRef: 'ORD-2026-034' },
-  { code: 'YRN-035', name: 'Supima Cotton 60s', weight: '145 GSM', color: 'White', customer: 'Arvind Ltd', orderRef: 'ORD-2026-035' },
-  { code: 'YRN-036', name: 'French Terry Cotton', weight: '240 GSM', color: 'Melange Grey', customer: 'Proline', orderRef: 'ORD-2026-036' },
-  { code: 'YRN-037', name: 'Silk Habotai', weight: '5mm', color: 'Baby Blue', customer: 'Soch', orderRef: 'ORD-2026-037' },
-  { code: 'YRN-038', name: 'Neoprene Scuba', weight: '250 GSM', color: 'Black', customer: 'Nike India', orderRef: 'ORD-2026-038' },
-  { code: 'YRN-039', name: 'Chanderi Silk Cotton', weight: '80 GSM', color: 'Mint Green', customer: 'Meena Bazaar', orderRef: 'ORD-2026-039' },
-  { code: 'YRN-040', name: 'Tweed Wool Blend', weight: '360 GSM', color: 'Houndstooth', customer: 'Peter England', orderRef: 'ORD-2026-040' },
-  { code: 'YRN-041', name: 'Interlock Double Knit', weight: '220 GSM', color: 'Ecru', customer: 'United Colors', orderRef: 'ORD-2026-041' },
-  { code: 'YRN-042', name: 'Poly Taffeta', weight: '85 GSM', color: 'Electric Blue', customer: 'Shoppers Stop', orderRef: 'ORD-2026-042' },
-  { code: 'YRN-043', name: 'Cotton Satin 300T', weight: '180 GSM', color: 'Cream', customer: 'Spread India', orderRef: 'ORD-2026-043' },
-  { code: 'YRN-044', name: 'Georgette Crepe', weight: '75 GSM', color: 'Coral', customer: 'FabAlley', orderRef: 'ORD-2026-044' },
-  { code: 'YRN-045', name: 'Denim Selvedge 14Oz', weight: '14 Oz', color: 'Raw Blue', customer: 'Flying Machine', orderRef: 'ORD-2026-045' },
-  { code: 'YRN-046', name: 'Knitted Velour', weight: '280 GSM', color: 'Burgundy', customer: 'Monte Carlo', orderRef: 'ORD-2026-046' },
-  { code: 'YRN-047', name: 'Linen Slub Yarn', weight: '155 GSM', color: 'Natural Slub', customer: 'Linen Club', orderRef: 'ORD-2026-047' },
-  { code: 'YRN-048', name: 'Micro Modal', weight: '150 GSM', color: 'Soft Grey', customer: 'Jockey India', orderRef: 'ORD-2026-048' },
-  { code: 'YRN-049', name: 'Fil Coupe Voile', weight: '55 GSM', color: 'Ivory', customer: 'Aza Fashions', orderRef: 'ORD-2026-049' },
-  { code: 'YRN-050', name: 'Cotton Poplin Reactive', weight: '90 GSM', color: 'Sky Blue Print', customer: 'Myntra Private', orderRef: 'ORD-2026-050' },
-];
+export interface YarnRoll {
+  code: string;
+  name: string;
+  weight: string;
+  color: string;
+  customer: string;
+  orderRef: string;
+  barcode?: string;
+  status?: string;
+  type?: 'FABRIC_ROLL' | 'YARN_BATCH';
+}
 
 // ─── Stage Definitions ────────────────────────────────────────────────────────
 const STAGES: { id: StageId; seq: number; label: string; description: string; defects: StageDefect[]; accentClass: string; lightBg: string; }[] = [
@@ -282,16 +242,88 @@ function reducer(state: State, action: Action): State {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function StageInspectionTracker() {
+  const [yarnRolls, setYarnRolls] = useState<YarnRoll[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'FABRIC_ROLL' | 'YARN_BATCH'>('ALL');
+  const [savingToDb, setSavingToDb] = useState(false);
+  const [dbSaveMessage, setDbSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   const [state, dispatch] = useReducer(reducer, {
-    selectedRollCode: YARN_ROLLS[0].code,
+    selectedRollCode: '',
     searchQuery: '',
     activeStageId: null,
     formDefects: [],
     formNotes: '',
     formInspector: 'Alex Kumar',
-    stageData: { [YARN_ROLLS[0].code]: buildInitialStages() },
+    stageData: {},
     successStage: null,
   });
+
+  // Load live yarn batches & fabric rolls from PostgreSQL database
+  useEffect(() => {
+    let isMounted = true;
+    const loadDatabaseData = async () => {
+      setLoading(true);
+      try {
+        const [batchesRes, rollsRes, ordersRes] = await Promise.all([
+          api.getYarnBatches().catch(() => ({ data: [] })),
+          api.getFabricRolls().catch(() => ({ data: [], rolls: [] })),
+          api.getProductionOrders().catch(() => ({ data: [] })),
+        ]);
+
+        if (!isMounted) return;
+
+        const batches = (batchesRes as any)?.data || (Array.isArray(batchesRes) ? batchesRes : []);
+        const rawRolls = (rollsRes as any)?.rolls || (rollsRes as any)?.data || (Array.isArray(rollsRes) ? rollsRes : []);
+        const orders = (ordersRes as any)?.data || (Array.isArray(ordersRes) ? ordersRes : []);
+
+        const mappedRolls: YarnRoll[] = rawRolls.map((r: any) => ({
+          code: r.roll_id || r.roll_code,
+          name: `${r.fabric_type || 'Cotton'} Fabric Roll`,
+          weight: `${r.weight || r.produced_quantity || 500} ${r.unit || 'm'}`,
+          color: 'Finished Weave',
+          customer: r.customer_name || r.customer || 'Retail Client',
+          orderRef: r.order_number || r.order_no || `Order #${r.production_order_id || 'PO'}`,
+          barcode: r.qr_code || r.roll_id,
+          status: r.qc_status || 'PENDING',
+          type: 'FABRIC_ROLL',
+        }));
+
+        // Only include raw materials that have been scanned & taken into the Storekeeper Inventory dashboard!
+        const takenBatches = batches.filter((b: any) => b.intake_scanned === true);
+
+        const mappedBatches: YarnRoll[] = takenBatches.map((b: any, idx: number) => {
+          const matchingOrder = orders[idx % (orders.length || 1)];
+          return {
+            code: b.batch_code,
+            name: `${b.yarn_type} Yarn · ${b.colour}`,
+            weight: `${b.available_quantity || b.quantity_available || b.received_quantity || 100} ${b.unit || 'kg'}`,
+            color: b.colour,
+            customer: b.supplier_name || b.supplier || 'Plant Inventory',
+            orderRef: b.po_reference || (matchingOrder ? matchingOrder.order_no || matchingOrder.order_number : 'Inventory Batch'),
+            barcode: b.barcode_id || b.barcode,
+            status: b.qc_status || b.inspection_status || 'PENDING',
+            type: 'YARN_BATCH',
+          };
+        });
+
+        // Combined dynamic list: Fabric Rolls from production input orders + Yarn Batches taken by storekeeper
+        const dynamicList: YarnRoll[] = [...mappedRolls, ...mappedBatches];
+
+        setYarnRolls(dynamicList);
+        if (dynamicList.length > 0) {
+          dispatch({ type: 'SELECT_ROLL', code: dynamicList[0].code });
+        }
+      } catch (err) {
+        console.error('Failed to load database items for inspection:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadDatabaseData();
+    return () => { isMounted = false; };
+  }, []);
 
   const clearSuccess = useCallback(() => {
     setTimeout(() => dispatch({ type: 'CLEAR_SUCCESS' }), 2000);
@@ -299,27 +331,170 @@ export default function StageInspectionTracker() {
 
   if (state.successStage) clearSuccess();
 
-  const filtered = YARN_ROLLS.filter((r) => {
+  const filtered = yarnRolls.filter((r) => {
     const q = state.searchQuery.toLowerCase();
-    return r.code.toLowerCase().includes(q) || r.name.toLowerCase().includes(q) || r.customer.toLowerCase().includes(q);
+    const matchCategory =
+      categoryFilter === 'ALL' ||
+      (categoryFilter === 'FABRIC_ROLL' && r.type === 'FABRIC_ROLL') ||
+      (categoryFilter === 'YARN_BATCH' && r.type === 'YARN_BATCH');
+    const matchText =
+      r.code.toLowerCase().includes(q) ||
+      r.name.toLowerCase().includes(q) ||
+      r.customer.toLowerCase().includes(q);
+    return matchCategory && matchText;
   });
 
-  const selectedRoll = YARN_ROLLS.find((r) => r.code === state.selectedRollCode);
-  const stages = state.stageData[state.selectedRollCode] ?? buildInitialStages();
-  const allPassed = STAGES.every((s) => stages[s.id].status === 'passed');
-  const anyRejected = STAGES.some((s) => stages[s.id].status === 'rejected');
-  const anyRework = STAGES.some((s) => stages[s.id].status === 'rework');
-  const completedCount = STAGES.filter((s) => stages[s.id].status === 'passed').length;
+  const selectedRoll = yarnRolls.find((r) => r.code === state.selectedRollCode) || yarnRolls[0];
+  const stages = (state.selectedRollCode ? state.stageData[state.selectedRollCode] : null) ?? buildInitialStages();
+  const allPassed = STAGES.every((s) => stages[s.id].status === 'passed') || selectedRoll?.status === 'APPROVED';
+  const anyRejected = STAGES.some((s) => stages[s.id].status === 'rejected') || selectedRoll?.status === 'REJECTED';
+  const anyRework = STAGES.some((s) => stages[s.id].status === 'rework') || selectedRoll?.status === 'REINSPECTION';
+  const completedCount = allPassed ? 4 : STAGES.filter((s) => stages[s.id].status === 'passed').length;
   const activeStage = STAGES.find((s) => s.id === state.activeStageId);
+
+  // ─── Database-backed Inspection Decision Submission ──────────────────────
+  const handleSaveDecision = async (decision: Decision) => {
+    const { activeStageId, formDefects, formNotes, formInspector } = state;
+    if (!activeStageId || !selectedRoll) return;
+
+    // 1. Dispatch UI update
+    dispatch({ type: 'SUBMIT', decision });
+
+    // 2. Persist to PostgreSQL Database!
+    setSavingToDb(true);
+    setDbSaveMessage(null);
+    try {
+      const isFabricRoll = selectedRoll.code.startsWith('ROLL-') || selectedRoll.type === 'FABRIC_ROLL';
+      if (isFabricRoll) {
+        const disposition = decision === 'pass' ? 'APPROVED' : (decision === 'rework' ? 'REINSPECTION' : 'REJECTED');
+        await api.recordFabricInspection(selectedRoll.code, {
+          disposition,
+          decision,
+          defect_type: formDefects.join(', ') || `${activeStage?.label} Stage Inspection`,
+          defect_count: formDefects.length,
+          remarks: `[Stage: ${activeStage?.label}] ${formNotes || 'Passed inspection'}`,
+          notes: formNotes,
+          inspector_name: formInspector,
+        });
+
+        // Update local list status
+        setYarnRolls((prev) =>
+          prev.map((r) =>
+            r.code === selectedRoll.code ? { ...r, status: disposition } : r
+          )
+        );
+
+        setDbSaveMessage({
+          type: 'success',
+          text: `Saved in PostgreSQL: Roll ${selectedRoll.code} marked "${disposition}". ${decision === 'pass' ? 'Cleared for Dispatch Gate!' : 'Sent to Quarantine.'}`,
+        });
+      } else {
+        const disposition = decision === 'pass' ? 'PASSED' : (decision === 'rework' ? 'ON_HOLD' : 'REJECTED');
+        await api.recordRawMaterialInspection(selectedRoll.code, {
+          disposition,
+          decision: disposition,
+          defects: formDefects.join(', '),
+          remarks: `[Stage: ${activeStage?.label}] ${formNotes}`,
+          inspector_name: formInspector,
+          quantity_approved: 100,
+        });
+
+        setYarnRolls((prev) =>
+          prev.map((r) =>
+            r.code === selectedRoll.code ? { ...r, status: disposition } : r
+          )
+        );
+
+        setDbSaveMessage({
+          type: 'success',
+          text: `Saved in PostgreSQL: Yarn batch ${selectedRoll.code} status updated to "${disposition}".`,
+        });
+      }
+    } catch (err: any) {
+      console.warn('Database inspection save:', err);
+      setDbSaveMessage({
+        type: 'error',
+        text: `Inspection recorded locally. Database note: ${err.message || 'Saved in queue'}`,
+      });
+    } finally {
+      setSavingToDb(false);
+    }
+  };
+
+  const rollsCount = yarnRolls.filter((r) => r.type === 'FABRIC_ROLL').length;
+  const batchesCount = yarnRolls.filter((r) => r.type === 'YARN_BATCH').length;
 
   return (
     <div className="font-sans">
+      {/* Feedback banner */}
+      {dbSaveMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`mb-4 p-3.5 rounded-xl border text-xs font-medium flex items-center justify-between gap-3 ${
+            dbSaveMessage.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-amber-50 border-amber-200 text-amber-800'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{dbSaveMessage.text}</span>
+          </div>
+          <button
+            onClick={() => setDbSaveMessage(null)}
+            className="text-slate-400 hover:text-slate-600 text-xs px-2 py-0.5"
+          >
+            ✕
+          </button>
+        </motion.div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-        {/* ─── LEFT: 50 Yarn Rolls List ─────────────────────────────────── */}
+        {/* ─── LEFT: Live Database Items (Rolls & Yarn) ───────────────────── */}
         <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-slate-100">
-            <p className="text-sm font-serif text-slate-800 tracking-tight mb-2">50 Yarn Batches</p>
+          <div className="p-4 border-b border-slate-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-serif text-slate-800 tracking-tight font-semibold">
+                {loading ? 'Connecting to Database...' : `${yarnRolls.length} Items (Live Database)`}
+              </p>
+              <span className="text-[10px] font-mono font-medium px-2 py-0.5 bg-teal-50 text-teal-700 rounded-full border border-teal-200">
+                PostgreSQL Sync
+              </span>
+            </div>
+
+            {/* Category tabs */}
+            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg text-[11px] font-medium text-slate-600">
+              <button
+                type="button"
+                onClick={() => setCategoryFilter('ALL')}
+                className={`flex-1 py-1 rounded-md transition text-center ${
+                  categoryFilter === 'ALL' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'hover:text-slate-900'
+                }`}
+              >
+                All ({yarnRolls.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategoryFilter('FABRIC_ROLL')}
+                className={`flex-1 py-1 rounded-md transition text-center ${
+                  categoryFilter === 'FABRIC_ROLL' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'hover:text-slate-900'
+                }`}
+              >
+                Rolls ({rollsCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategoryFilter('YARN_BATCH')}
+                className={`flex-1 py-1 rounded-md transition text-center ${
+                  categoryFilter === 'YARN_BATCH' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'hover:text-slate-900'
+                }`}
+              >
+                Yarn ({batchesCount})
+              </button>
+            </div>
+
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -327,12 +502,24 @@ export default function StageInspectionTracker() {
                 placeholder="Search code, name, customer…"
                 value={state.searchQuery}
                 onChange={(e) => dispatch({ type: 'SEARCH', q: e.target.value })}
-                className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent placeholder-slate-400"
+                className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent placeholder-slate-400"
               />
             </div>
           </div>
           <div className="overflow-y-auto max-h-[62vh] divide-y divide-slate-50">
-            {filtered.map((roll) => {
+            {loading ? (
+              <div className="p-8 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+                <RefreshCw className="w-5 h-5 animate-spin text-teal-600" />
+                <span>Loading PostgreSQL yarn batches...</span>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 text-xs">
+                {yarnRolls.length === 0
+                  ? 'No yarn batches currently registered in database. Receive yarn in Storekeeper inventory to begin inspection.'
+                  : 'No matching yarn batches found.'}
+              </div>
+            ) : (
+              filtered.map((roll) => {
               const rollStages = state.stageData[roll.code] ?? buildInitialStages();
               const passed = STAGES.filter((s) => rollStages[s.id].status === 'passed').length;
               const rej = STAGES.some((s) => rollStages[s.id].status === 'rejected');
@@ -365,7 +552,7 @@ export default function StageInspectionTracker() {
                   </div>
                 </button>
               );
-            })}
+            }))}
           </div>
         </div>
 
@@ -415,6 +602,32 @@ export default function StageInspectionTracker() {
                 />
               </div>
             </div>
+
+            {/* Clearance for Dispatch Gate Link */}
+            {allPassed && (
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-3 flex-wrap"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-emerald-900">Cleared for Vehicle Loading in Database</p>
+                    <p className="text-[11px] text-emerald-700">QC Status is APPROVED. Barcode can now be scanned at Dispatch Dock.</p>
+                  </div>
+                </div>
+                <a
+                  href="/dispatch"
+                  className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-sm transition"
+                >
+                  <span>Go to Dispatch Gate</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </motion.div>
+            )}
           </div>
 
           {/* ─── Vertical Stage Roadmap Card ──────────────────────────── */}
@@ -548,28 +761,34 @@ export default function StageInspectionTracker() {
                                 {/* Decision buttons */}
                                 <div className="grid grid-cols-3 gap-2">
                                   <button
-                                    onClick={() => dispatch({ type: 'SUBMIT', decision: 'pass' })}
-                                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition active:scale-95 cursor-pointer"
+                                    type="button"
+                                    disabled={savingToDb}
+                                    onClick={() => handleSaveDecision('pass')}
+                                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition active:scale-95 cursor-pointer disabled:opacity-50"
                                   >
-                                    <Check className="w-5 h-5" />
-                                    <span className="text-xs font-medium">Pass</span>
-                                    <span className="text-[10px] text-emerald-600">Good to proceed</span>
+                                    {savingToDb ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+                                    <span className="text-xs font-semibold">Pass & Clear</span>
+                                    <span className="text-[10px] text-emerald-600">Save to PostgreSQL</span>
                                   </button>
                                   <button
-                                    onClick={() => dispatch({ type: 'SUBMIT', decision: 'rework' })}
-                                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition active:scale-95 cursor-pointer"
+                                    type="button"
+                                    disabled={savingToDb}
+                                    onClick={() => handleSaveDecision('rework')}
+                                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition active:scale-95 cursor-pointer disabled:opacity-50"
                                   >
                                     <RotateCcw className="w-5 h-5" />
-                                    <span className="text-xs font-medium">Rework</span>
-                                    <span className="text-[10px] text-amber-600">Send back to fix</span>
+                                    <span className="text-xs font-semibold">Rework</span>
+                                    <span className="text-[10px] text-amber-600">Hold for correction</span>
                                   </button>
                                   <button
-                                    onClick={() => dispatch({ type: 'SUBMIT', decision: 'reject' })}
-                                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition active:scale-95 cursor-pointer"
+                                    type="button"
+                                    disabled={savingToDb}
+                                    onClick={() => handleSaveDecision('reject')}
+                                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition active:scale-95 cursor-pointer disabled:opacity-50"
                                   >
                                     <X className="w-5 h-5" />
-                                    <span className="text-xs font-medium">Reject</span>
-                                    <span className="text-[10px] text-red-600">Cannot proceed</span>
+                                    <span className="text-xs font-semibold">Reject</span>
+                                    <span className="text-[10px] text-red-600">Lock in Quarantine</span>
                                   </button>
                                 </div>
 

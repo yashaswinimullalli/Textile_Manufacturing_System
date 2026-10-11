@@ -152,6 +152,56 @@ class ApiClient {
     return this.request<{ events: AuditEvent[] }>(`/audit${query}`);
   }
 
+  // --- Live PostgreSQL Database Methods ---
+  async getYarnBatches(params?: { intake_scanned?: boolean }): Promise<{ data: any[] }> {
+    const q = params?.intake_scanned !== undefined ? `?intake_scanned=${params.intake_scanned}` : '';
+    return this.request<{ data: any[] }>(`/yarn-batches${q}`);
+  }
+
+  async markBatchScanned(idOrBarcode: string): Promise<any> {
+    return this.request<any>(`/yarn-batches/${encodeURIComponent(idOrBarcode.trim())}/intake-scan`, {
+      method: 'POST',
+    });
+  }
+
+  async unmarkBatchScanned(idOrBarcode: string): Promise<any> {
+    return this.request<any>(`/yarn-batches/${encodeURIComponent(idOrBarcode.trim())}/intake-scan`, {
+      method: 'DELETE',
+    });
+  }
+
+  async quickAddYarnBatch(): Promise<{ data: any; message: string }> {
+    return this.request<{ data: any; message: string }>('/yarn-batches/quick-add', {
+      method: 'POST',
+    });
+  }
+
+  async getProductionOrders(): Promise<{ data: any[] }> {
+    return this.request<{ data: any[] }>('/orders');
+  }
+
+  async getFabricRolls(): Promise<{ data: any[]; rolls: any[] }> {
+    return this.request<{ data: any[]; rolls: any[] }>('/fabric-rolls');
+  }
+
+  async getDispatches(): Promise<{ data: any[] }> {
+    return this.request<{ data: any[] }>('/dispatches');
+  }
+
+  async recordFabricInspection(rollId: string, payload: any): Promise<any> {
+    return this.request<any>(`/fabric-rolls/${encodeURIComponent(rollId.trim())}/inspections`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async recordRawMaterialInspection(batchId: string, payload: any): Promise<any> {
+    return this.request<any>(`/quality-inspections/batches/${encodeURIComponent(batchId.trim())}/inspections`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
   // --- Demo Reset ---
   async resetDemoData(): Promise<any> {
     return this.request<any>('/demo/reset', { method: 'POST' });
